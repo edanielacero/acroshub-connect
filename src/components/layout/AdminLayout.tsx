@@ -1,8 +1,9 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { BookOpen, LayoutDashboard, Users, Settings, Menu, X, LogOut, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 
 const adminLinks = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -22,8 +23,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-foreground transform transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-border">
-          <BookOpen className="h-6 w-6 text-sidebar-primary" />
+        <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
+          <AcroshubLogo className="h-7 w-7 text-sidebar-primary" />
           <span className="font-bold text-lg">Acroshub Admin</span>
         </div>
         <nav className="p-4 space-y-1">

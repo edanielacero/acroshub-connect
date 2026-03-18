@@ -1,8 +1,9 @@
 import { ReactNode } from "react";
-import { BookOpen, Package, Compass, LogOut, ChevronDown } from "lucide-react";
+import { Package, Compass, LogOut, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 import { getCurrentAlumno } from "@/data/mockData";
 
 interface HubLayoutProps {
@@ -20,7 +21,7 @@ export function HubLayout({ children, hubName, slug }: HubLayoutProps) {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container flex h-16 items-center justify-between">
           <Link to={`/${slug}`} className="flex items-center gap-2 font-bold text-lg text-primary">
-            <BookOpen className="h-5 w-5" />
+            <AcroshubLogo className="h-6 w-6" />
             {hubName}
           </Link>
           <nav className="flex items-center gap-1">
