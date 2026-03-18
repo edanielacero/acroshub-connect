@@ -15,34 +15,32 @@ export default function HubLanding() {
 
   return (
     <HubLayout hubName={hub.name} slug={hub.slug}>
-      {/* Hero */}
-      <section className="py-16 bg-gradient-to-br from-primary/10 to-primary/5">
-        <div className="container text-center max-w-2xl">
-          <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-4">
+      <section className="bg-gradient-to-br from-primary/10 to-primary/5 py-12 sm:py-16">
+        <div className="container max-w-2xl text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <FolderOpen className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl lg:text-4xl font-bold mb-3">{hub.name}</h1>
+          <h1 className="mb-3 text-3xl font-bold sm:text-4xl">{hub.name}</h1>
           <p className="text-muted-foreground">{hub.description}</p>
-          {prof && <p className="text-sm text-muted-foreground mt-2">Por {prof.name}</p>}
+          {prof && <p className="mt-2 text-sm text-muted-foreground">Por {prof.name}</p>}
         </div>
       </section>
 
-      {/* Courses */}
-      <section className="py-12">
+      <section className="py-10 sm:py-12">
         <div className="container">
-          <h2 className="text-2xl font-bold mb-6">Cursos disponibles</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <h2 className="mb-6 text-2xl font-bold">Cursos disponibles</h2>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {hubCourses.map(course => (
               <Card key={course.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="h-40 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <div className="flex h-40 items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
                   <BookOpen className="h-12 w-12 text-primary/30" />
                 </div>
                 <CardContent className="p-5">
-                  <h3 className="font-semibold text-lg">{course.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{course.description}</p>
-                  <div className="flex items-center justify-between mt-4">
+                  <h3 className="text-lg font-semibold">{course.title}</h3>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-xl font-bold text-primary">${course.price}</span>
-                    <Button size="sm" asChild>
+                    <Button size="sm" asChild className="w-full sm:w-auto">
                       <Link to={`/${slug}/curso/${course.id}`}>Ver curso</Link>
                     </Button>
                   </div>

@@ -24,8 +24,8 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md animate-fade-in">
         <CardHeader className="text-center">
-          <Link to="/" className="inline-flex items-center justify-center gap-2 text-primary font-bold text-xl mb-2">
-            <AcroshubLogo className="h-8 w-8" /> Acroshub
+          <Link to="/" className="mb-2 inline-flex items-center justify-center gap-2 text-lg font-bold text-primary sm:text-xl">
+            <AcroshubLogo className="h-7 w-7 sm:h-8 sm:w-8" /> Acroshub
           </Link>
           <CardTitle className="text-2xl">Crear cuenta</CardTitle>
           <CardDescription>Regístrate para empezar</CardDescription>
@@ -46,7 +46,7 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label>¿Qué eres?</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Button type="button" variant={role === "profesor" ? "default" : "outline"} className="w-full" onClick={() => setRole("profesor")}>
                   Soy profesor
                 </Button>
@@ -57,8 +57,8 @@ export default function RegisterPage() {
             </div>
             <Button type="submit" className="w-full">Crear cuenta</Button>
           </form>
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            ¿Ya tienes cuenta? <Link to="/login" className="text-primary font-medium hover:underline">Inicia sesión</Link>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            ¿Ya tienes cuenta? <Link to="/login" className="font-medium text-primary hover:underline">Inicia sesión</Link>
           </p>
         </CardContent>
       </Card>

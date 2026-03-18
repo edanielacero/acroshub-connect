@@ -2,7 +2,6 @@ import { useParams, Link } from "react-router-dom";
 import { hubs, courses, comments, getCurrentAlumno } from "@/data/mockData";
 import { HubLayout } from "@/components/layout/HubLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -19,7 +18,6 @@ export default function LessonPlayer() {
   const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
 
-  // Find lesson across all courses
   let foundLesson: Lesson | null = null;
   let foundModule: any = null;
   let foundCourse: any = null;
@@ -39,22 +37,40 @@ export default function LessonPlayer() {
   const currentIdx = allLessons.findIndex((l: Lesson) => l.id === id);
   const prevLesson = currentIdx > 0 ? allLessons[currentIdx - 1] : null;
   const nextLesson = currentIdx < allLessons.length - 1 ? allLessons[currentIdx + 1] : null;
-  const lessonComments = comments.filter(c => c.lessonId === foundLesson!.id);
+  const lessonComments = comments.filter(c => c.lessonId === foundLesson.id);
   const parentComments = lessonComments.filter(c => !c.parentId);
 
   const quizScore = foundLesson.quiz ? foundLesson.quiz.filter(q => quizAnswers[q.id] === q.correctIndex).length : 0;
 
+  const lessonList = (
+    <div className="rounded-lg border p-4 space-y-1">
+      <h3 className="mb-3 text-sm font-semibold">{foundModule.title}</h3>
+      {foundModule.lessons.map((l: Lesson) => (
+        <Link
+          key={l.id}
+          to={`/${slug}/clase/${l.id}`}
+          className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${l.id === id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted'}`}
+        >
+          {alumno.completedLessons.includes(l.id) ? (
+            <CheckCircle className="h-4 w-4 text-success shrink-0" />
+          ) : (
+            <Play className="h-4 w-4 shrink-0" />
+          )}
+          <span className="truncate">{l.title}</span>
+        </Link>
+      ))}
+    </div>
+  );
+
   return (
     <HubLayout hubName={hub.name} slug={hub.slug}>
       <div className="container py-6">
-        <div className="grid lg:grid-cols-[1fr_320px] gap-6">
-          {/* Main content */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
-            {/* Video */}
-            <div className="aspect-video bg-foreground/5 rounded-xl flex items-center justify-center">
+            <div className="aspect-video rounded-xl bg-foreground/5 flex items-center justify-center">
               {foundLesson.videoUrl ? (
                 <div className="text-center">
-                  <Play className="h-16 w-16 text-primary mx-auto mb-2" />
+                  <Play className="mx-auto mb-2 h-16 w-16 text-primary" />
                   <p className="text-sm text-muted-foreground">Video player</p>
                 </div>
               ) : (
@@ -62,49 +78,48 @@ export default function LessonPlayer() {
               )}
             </div>
 
-            <div>
+            <div className="space-y-3">
               <h1 className="text-2xl font-bold">{foundLesson.title}</h1>
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-center gap-3">
                 <Checkbox id="completed" defaultChecked={alumno.completedLessons.includes(foundLesson.id)} />
                 <label htmlFor="completed" className="text-sm">Marcar como completada</label>
               </div>
             </div>
 
-            {/* Content */}
+            <div className="lg:hidden">{lessonList}</div>
+
             {foundLesson.content && (
-              <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: foundLesson.content }} />
+              <div className="prose prose-sm max-w-none break-words" dangerouslySetInnerHTML={{ __html: foundLesson.content }} />
             )}
 
-            {/* PDF */}
             {foundLesson.hasPdf && (
-              <Button variant="outline"><FileText className="mr-2 h-4 w-4" />Ver PDF adjunto</Button>
+              <Button variant="outline" className="w-full sm:w-auto"><FileText className="mr-2 h-4 w-4" />Ver PDF adjunto</Button>
             )}
 
-            {/* Quiz */}
             {foundLesson.quiz && foundLesson.quiz.length > 0 && (
               <Accordion type="single" collapsible>
-                <AccordionItem value="quiz" className="border rounded-lg">
+                <AccordionItem value="quiz" className="rounded-lg border">
                   <AccordionTrigger className="px-4">Quiz ({foundLesson.quiz.length} preguntas)</AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4 space-y-4">
+                  <AccordionContent className="space-y-4 px-4 pb-4">
                     {quizSubmitted ? (
-                      <div className="text-center py-4">
+                      <div className="py-4 text-center">
                         <p className="text-2xl font-bold">¡Obtuviste {quizScore}/{foundLesson.quiz.length}!</p>
-                        <Button variant="outline" className="mt-3" onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); }}>Reintentar</Button>
+                        <Button variant="outline" className="mt-3 w-full sm:w-auto" onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); }}>Reintentar</Button>
                       </div>
                     ) : (
                       <>
                         {foundLesson.quiz.map((q, qi) => (
                           <div key={q.id} className="space-y-2">
-                            <p className="font-medium text-sm">{qi + 1}. {q.question}</p>
+                            <p className="text-sm font-medium">{qi + 1}. {q.question}</p>
                             {q.options.map((opt, oi) => (
-                              <label key={oi} className="flex items-center gap-2 text-sm cursor-pointer">
-                                <input type="radio" name={q.id} checked={quizAnswers[q.id] === oi} onChange={() => setQuizAnswers(prev => ({ ...prev, [q.id]: oi }))} />
-                                {opt}
+                              <label key={oi} className="flex items-start gap-2 text-sm cursor-pointer">
+                                <input type="radio" name={q.id} checked={quizAnswers[q.id] === oi} onChange={() => setQuizAnswers(prev => ({ ...prev, [q.id]: oi }))} className="mt-0.5" />
+                                <span>{opt}</span>
                               </label>
                             ))}
                           </div>
                         ))}
-                        <Button onClick={() => setQuizSubmitted(true)}>Ver resultado</Button>
+                        <Button className="w-full sm:w-auto" onClick={() => setQuizSubmitted(true)}>Ver resultado</Button>
                       </>
                     )}
                   </AccordionContent>
@@ -112,12 +127,11 @@ export default function LessonPlayer() {
               </Accordion>
             )}
 
-            {/* Comments */}
             <div className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2"><MessageSquare className="h-5 w-5" />Comentarios</h3>
-              <div className="flex gap-2">
+              <h3 className="flex items-center gap-2 font-semibold"><MessageSquare className="h-5 w-5" />Comentarios</h3>
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Textarea placeholder="Escribe un comentario..." value={comment} onChange={e => setComment(e.target.value)} className="flex-1" rows={2} />
-                <Button onClick={() => { setComment(''); toast.success("Comentario publicado"); }}>Publicar</Button>
+                <Button className="w-full sm:w-auto" onClick={() => { setComment(''); toast.success("Comentario publicado"); }}>Publicar</Button>
               </div>
               <div className="space-y-4">
                 {parentComments.map(c => {
@@ -126,18 +140,18 @@ export default function LessonPlayer() {
                     <div key={c.id} className="space-y-2">
                       <div className="flex gap-3">
                         <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">{c.userName.charAt(0)}</div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2"><span className="text-sm font-medium">{c.userName}</span><span className="text-xs text-muted-foreground">{new Date(c.createdAt).toLocaleDateString()}</span></div>
-                          <p className="text-sm mt-1">{c.text}</p>
-                          <Button variant="ghost" size="sm" className="text-xs mt-1 h-auto p-0 text-muted-foreground">Responder</Button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">{c.userName}</span><span className="text-xs text-muted-foreground">{new Date(c.createdAt).toLocaleDateString()}</span></div>
+                          <p className="mt-1 text-sm break-words">{c.text}</p>
+                          <Button variant="ghost" size="sm" className="mt-1 h-auto p-0 text-xs text-muted-foreground">Responder</Button>
                         </div>
                       </div>
                       {replies.map(r => (
-                        <div key={r.id} className="flex gap-3 ml-11">
+                        <div key={r.id} className="ml-6 flex gap-3 sm:ml-11">
                           <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">{r.userName.charAt(0)}</div>
-                          <div>
-                            <div className="flex items-center gap-2"><span className="text-sm font-medium">{r.userName}</span><span className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</span></div>
-                            <p className="text-sm mt-1">{r.text}</p>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">{r.userName}</span><span className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</span></div>
+                            <p className="mt-1 text-sm break-words">{r.text}</p>
                           </div>
                         </div>
                       ))}
@@ -147,36 +161,18 @@ export default function LessonPlayer() {
               </div>
             </div>
 
-            {/* Navigation */}
-            <div className="flex justify-between pt-4 border-t">
+            <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:justify-between">
               {prevLesson ? (
-                <Button variant="outline" asChild><Link to={`/${slug}/clase/${prevLesson.id}`}><ArrowLeft className="mr-2 h-4 w-4" />Clase anterior</Link></Button>
+                <Button variant="outline" asChild className="w-full sm:w-auto"><Link to={`/${slug}/clase/${prevLesson.id}`}><ArrowLeft className="mr-2 h-4 w-4" />Clase anterior</Link></Button>
               ) : <div />}
               {nextLesson ? (
-                <Button asChild><Link to={`/${slug}/clase/${nextLesson.id}`}>Siguiente clase<ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+                <Button asChild className="w-full sm:w-auto"><Link to={`/${slug}/clase/${nextLesson.id}`}>Siguiente clase<ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
               ) : <div />}
             </div>
           </div>
 
-          {/* Sidebar - lessons list */}
           <div className="hidden lg:block">
-            <div className="sticky top-24 border rounded-lg p-4 space-y-1 max-h-[70vh] overflow-y-auto">
-              <h3 className="font-semibold text-sm mb-3">{foundModule.title}</h3>
-              {foundModule.lessons.map((l: Lesson) => (
-                <Link
-                  key={l.id}
-                  to={`/${slug}/clase/${l.id}`}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${l.id === id ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-muted-foreground'}`}
-                >
-                  {alumno.completedLessons.includes(l.id) ? (
-                    <CheckCircle className="h-4 w-4 text-success shrink-0" />
-                  ) : (
-                    <Play className="h-4 w-4 shrink-0" />
-                  )}
-                  <span className="truncate">{l.title}</span>
-                </Link>
-              ))}
-            </div>
+            <div className="sticky top-24 max-h-[70vh] overflow-y-auto">{lessonList}</div>
           </div>
         </div>
       </div>

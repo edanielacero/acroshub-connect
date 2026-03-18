@@ -15,20 +15,20 @@ export default function AdminDashboard() {
       <div className="space-y-6 animate-fade-in">
         <h1 className="text-2xl font-bold">Dashboard</h1>
 
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <MetricCard title="Total profesores" value={profesores.length} icon={<Users className="h-6 w-6" />} />
           <MetricCard title="Profesores activos" value={activeProfs.length} icon={<UserCheck className="h-6 w-6" />} />
           <MetricCard title="Total alumnos" value={alumnos.length} icon={<GraduationCap className="h-6 w-6" />} />
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold">Profesores recientes</h2>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
               <Link to="/admin/profesores">Ver todos</Link>
             </Button>
           </div>
-          <div className="border rounded-lg overflow-hidden bg-card">
+          <div className="overflow-x-auto rounded-lg border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -43,15 +43,15 @@ export default function AdminDashboard() {
               <TableBody>
                 {profesores.map(p => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.email}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{p.name}</TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">{p.email}</TableCell>
                     <TableCell><Badge variant="secondary" className="capitalize">{p.plan}</Badge></TableCell>
                     <TableCell>
                       <Badge variant={p.status === 'activo' ? 'default' : 'destructive'} className="capitalize">
                         {p.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{p.createdAt}</TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">{p.createdAt}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" asChild>
                         <Link to={`/admin/profesores/${p.id}`}>Ver</Link>

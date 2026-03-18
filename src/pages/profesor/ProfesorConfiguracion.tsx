@@ -13,7 +13,7 @@ export default function ProfesorConfiguracion() {
 
   return (
     <ProfesorLayout>
-      <div className="space-y-6 animate-fade-in max-w-2xl">
+      <div className="max-w-2xl space-y-6 animate-fade-in">
         <h1 className="text-2xl font-bold">Configuración</h1>
 
         <Card>
@@ -28,7 +28,7 @@ export default function ProfesorConfiguracion() {
             </div>
             <div className="space-y-2">
               <Label>Contraseña</Label>
-              <Button variant="outline" size="sm">Cambiar contraseña</Button>
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">Cambiar contraseña</Button>
             </div>
           </CardContent>
         </Card>
@@ -37,20 +37,20 @@ export default function ProfesorConfiguracion() {
           <CardHeader><CardTitle>Stripe Connect</CardTitle></CardHeader>
           <CardContent>
             {prof.stripeConnected ? (
-              <div className="flex items-center gap-3">
-                <Badge className="bg-success text-success-foreground gap-1"><CheckCircle className="h-3.5 w-3.5" />Conectado</Badge>
-                <span className="text-sm text-muted-foreground">{prof.stripeEmail}</span>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Badge className="w-fit gap-1 bg-success text-success-foreground"><CheckCircle className="h-3.5 w-3.5" />Conectado</Badge>
+                <span className="text-sm text-muted-foreground break-all">{prof.stripeEmail}</span>
               </div>
             ) : (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Conecta tu cuenta de Stripe para recibir pagos directamente de tus alumnos.</p>
-                <Button>Conectar Stripe</Button>
+                <Button className="w-full sm:w-auto">Conectar Stripe</Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Button onClick={() => toast.success("Cambios guardados correctamente")}>Guardar cambios</Button>
+        <Button className="w-full sm:w-auto" onClick={() => toast.success("Cambios guardados correctamente")}>Guardar cambios</Button>
       </div>
     </ProfesorLayout>
   );

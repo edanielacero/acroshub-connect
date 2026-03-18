@@ -17,8 +17,8 @@ export default function HubMyProducts() {
 
   return (
     <HubLayout hubName={hub.name} slug={hub.slug}>
-      <div className="container py-8">
-        <h1 className="text-2xl font-bold mb-6">Mis Productos</h1>
+      <div className="container py-6 sm:py-8">
+        <h1 className="mb-6 text-2xl font-bold">Mis Productos</h1>
 
         {myCourses.length === 0 ? (
           <EmptyState
@@ -29,7 +29,7 @@ export default function HubMyProducts() {
             actionTo={`/${slug}/descubrir`}
           />
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {myCourses.map(course => {
               const totalLessons = course.modules.reduce((a, m) => a + m.lessons.length, 0);
               const completed = course.modules.reduce((a, m) =>
@@ -38,7 +38,7 @@ export default function HubMyProducts() {
 
               return (
                 <Card key={course.id} className="overflow-hidden">
-                  <div className="h-36 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                  <div className="flex h-36 items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
                     <BookOpen className="h-10 w-10 text-primary/30" />
                   </div>
                   <CardContent className="p-4">
@@ -50,7 +50,7 @@ export default function HubMyProducts() {
                       </div>
                       <Progress value={progress} className="h-2" />
                     </div>
-                    <Button className="w-full mt-3" size="sm" asChild>
+                    <Button className="mt-3 w-full" size="sm" asChild>
                       <Link to={`/${slug}/clase/${course.modules[0]?.lessons[0]?.id}`}>Continuar</Link>
                     </Button>
                   </CardContent>

@@ -27,7 +27,7 @@ export default function AdminConfiguracion() {
       <div className="space-y-6 animate-fade-in">
         <h1 className="text-2xl font-bold">Configuración de Planes</h1>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan, idx) => (
             <Card key={plan.key}>
               <CardHeader><CardTitle className="capitalize">{plan.name}</CardTitle></CardHeader>
@@ -49,7 +49,7 @@ export default function AdminConfiguracion() {
           ))}
         </div>
 
-        <Button onClick={() => toast.success("Configuración guardada correctamente")}>Guardar cambios</Button>
+        <Button className="w-full sm:w-auto" onClick={() => toast.success("Configuración guardada correctamente")}>Guardar cambios</Button>
       </div>
     </AdminLayout>
   );
