@@ -16,7 +16,6 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Demo: route based on email
     if (email.includes("admin")) {
       navigate("/admin");
     } else if (email.includes("profesor") || email.includes("carlos") || email.includes("maria")) {
@@ -31,8 +30,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md animate-fade-in">
         <CardHeader className="text-center">
-          <Link to="/" className="inline-flex items-center justify-center gap-2 text-primary font-bold text-xl mb-2">
-            <AcroshubLogo className="h-8 w-8" /> Acroshub
+          <Link to="/" className="mb-2 inline-flex items-center justify-center gap-2 text-lg font-bold text-primary sm:text-xl">
+            <AcroshubLogo className="h-7 w-7 sm:h-8 sm:w-8" /> Acroshub
           </Link>
           <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
           <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
@@ -54,10 +53,10 @@ export default function LoginPage() {
             </div>
             <Button type="submit" className="w-full">Iniciar sesión</Button>
           </form>
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            ¿No tienes cuenta? <Link to="/register" className="text-primary font-medium hover:underline">Regístrate</Link>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            ¿No tienes cuenta? <Link to="/register" className="font-medium text-primary hover:underline">Regístrate</Link>
           </p>
-          <div className="mt-4 p-3 rounded-lg bg-muted text-xs text-muted-foreground">
+          <div className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
             <strong>Demo:</strong> Usa "admin@" para admin, "carlos@" para profesor, o cualquier otro email para alumno.
           </div>
         </CardContent>

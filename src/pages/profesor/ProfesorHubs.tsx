@@ -13,22 +13,22 @@ export default function ProfesorHubs() {
   return (
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold">Mis HUBs</h1>
-          <Button onClick={() => toast.info("Funcionalidad de crear HUB próximamente")}><Plus className="mr-2 h-4 w-4" />Crear HUB</Button>
+          <Button className="w-full sm:w-auto" onClick={() => toast.info("Funcionalidad de crear HUB próximamente")}><Plus className="mr-2 h-4 w-4" />Crear HUB</Button>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {profHubs.map(hub => (
             <Card key={hub.id} className="overflow-hidden hover:shadow-md transition-shadow">
-              <div className="h-36 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
                 <FolderOpen className="h-14 w-14 text-primary/40" />
               </div>
               <CardContent className="p-4">
-                <h3 className="font-semibold text-lg">{hub.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{hub.description}</p>
-                <p className="text-xs text-muted-foreground mt-2">{hub.coursesCount} cursos · {hub.studentsCount} alumnos</p>
-                <div className="flex gap-2 mt-3">
+                <h3 className="text-lg font-semibold">{hub.name}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{hub.description}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{hub.coursesCount} cursos · {hub.studentsCount} alumnos</p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   <Button variant="outline" size="sm" asChild className="flex-1">
                     <Link to={`/dashboard/hubs/${hub.id}`}>Editar</Link>
                   </Button>

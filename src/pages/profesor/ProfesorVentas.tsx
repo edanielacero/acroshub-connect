@@ -29,7 +29,7 @@ export default function ProfesorVentas() {
       <div className="space-y-6 animate-fade-in">
         <h1 className="text-2xl font-bold">Reportes de Ventas</h1>
 
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <MetricCard title="Ventas totales" value={`$${totalAmount.toFixed(2)}`} icon={<DollarSign className="h-6 w-6" />} />
           <MetricCard title="Ventas este mes" value={`$${thisMonthAmount.toFixed(2)}`} icon={<TrendingUp className="h-6 w-6" />} />
           <MetricCard title="Alumnos nuevos" value={newStudents} icon={<Users className="h-6 w-6" />} />
@@ -44,7 +44,7 @@ export default function ProfesorVentas() {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Line type="monotone" dataKey="ventas" stroke="hsl(217, 91%, 53%)" strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="ventas" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -53,28 +53,30 @@ export default function ProfesorVentas() {
         <Card>
           <CardHeader><CardTitle>Transacciones recientes</CardTitle></CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Alumno</TableHead>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Método</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {profSales.map(s => (
-                  <TableRow key={s.id}>
-                    <TableCell>{s.date}</TableCell>
-                    <TableCell>{s.alumnoName}</TableCell>
-                    <TableCell>{s.courseTitle}</TableCell>
-                    <TableCell className="font-medium">${s.amount}</TableCell>
-                    <TableCell><Badge variant="secondary" className="capitalize">{s.method}</Badge></TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Alumno</TableHead>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Monto</TableHead>
+                    <TableHead>Método</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {profSales.map(s => (
+                    <TableRow key={s.id}>
+                      <TableCell className="whitespace-nowrap">{s.date}</TableCell>
+                      <TableCell className="whitespace-nowrap">{s.alumnoName}</TableCell>
+                      <TableCell>{s.courseTitle}</TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">${s.amount}</TableCell>
+                      <TableCell><Badge variant="secondary" className="capitalize">{s.method}</Badge></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

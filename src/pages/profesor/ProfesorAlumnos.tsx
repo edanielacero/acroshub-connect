@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Plus, UserPlus } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -20,11 +20,11 @@ export default function ProfesorAlumnos() {
   return (
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold">Alumnos</h1>
           <Dialog>
             <DialogTrigger asChild>
-              <Button><UserPlus className="mr-2 h-4 w-4" />Agregar alumno</Button>
+              <Button className="w-full sm:w-auto"><UserPlus className="mr-2 h-4 w-4" />Agregar alumno</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Agregar alumno manualmente</DialogTitle></DialogHeader>
@@ -58,12 +58,12 @@ export default function ProfesorAlumnos() {
           </Dialog>
         </div>
 
-        <div className="relative max-w-sm">
+        <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar por nombre o email..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
 
-        <div className="border rounded-lg overflow-hidden bg-card">
+        <div className="overflow-x-auto rounded-lg border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -78,14 +78,16 @@ export default function ProfesorAlumnos() {
             <TableBody>
               {filtered.map(a => (
                 <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{a.email}</TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">{a.name}</TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">{a.email}</TableCell>
                   <TableCell>{a.purchasedCourses.length}</TableCell>
-                  <TableCell className="text-muted-foreground">{a.createdAt}</TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">{a.createdAt}</TableCell>
                   <TableCell><Badge variant="default">Activo</Badge></TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button variant="ghost" size="sm">Ver</Button>
-                    <Button variant="outline" size="sm" onClick={() => toast.success("Acceso revocado")}>Revocar</Button>
+                  <TableCell className="text-right">
+                    <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row">
+                      <Button variant="ghost" size="sm">Ver</Button>
+                      <Button variant="outline" size="sm" onClick={() => toast.success("Acceso revocado")}>Revocar</Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

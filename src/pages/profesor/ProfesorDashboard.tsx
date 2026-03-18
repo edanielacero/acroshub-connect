@@ -17,29 +17,29 @@ export default function ProfesorDashboard() {
   return (
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <Button asChild><Link to="/dashboard/hubs"><Plus className="mr-2 h-4 w-4" />Crear nuevo HUB</Link></Button>
+          <Button asChild className="w-full sm:w-auto"><Link to="/dashboard/hubs"><Plus className="mr-2 h-4 w-4" />Crear nuevo HUB</Link></Button>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <MetricCard title="Total alumnos" value={totalStudents} icon={<Users className="h-6 w-6" />} />
           <MetricCard title="Ventas este mes" value={`$${thisMonth.reduce((a, s) => a + s.amount, 0).toFixed(2)}`} icon={<DollarSign className="h-6 w-6" />} />
           <MetricCard title="Cursos publicados" value={profCourses.length} icon={<BookOpen className="h-6 w-6" />} />
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold mb-4">Mis HUBs</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <h2 className="mb-4 text-lg font-semibold">Mis HUBs</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {profHubs.map(hub => (
               <Card key={hub.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="h-32 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <div className="flex h-32 items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
                   <FolderOpen className="h-12 w-12 text-primary/40" />
                 </div>
                 <CardContent className="p-4">
                   <h3 className="font-semibold">{hub.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{hub.coursesCount} cursos · {hub.studentsCount} alumnos</p>
-                  <div className="flex gap-2 mt-3">
+                  <p className="mt-1 text-sm text-muted-foreground">{hub.coursesCount} cursos · {hub.studentsCount} alumnos</p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <Button variant="outline" size="sm" asChild className="flex-1">
                       <Link to={`/dashboard/hubs/${hub.id}`}>Editar</Link>
                     </Button>

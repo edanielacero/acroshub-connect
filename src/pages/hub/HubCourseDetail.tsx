@@ -20,33 +20,33 @@ export default function HubCourseDetail() {
 
   return (
     <HubLayout hubName={hub.name} slug={hub.slug}>
-      <div className="container py-8 max-w-4xl">
-        <Link to={`/${slug}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
+      <div className="container max-w-4xl py-6 sm:py-8">
+        <Link to={`/${slug}`} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />{hub.name}
         </Link>
 
-        <div className="grid lg:grid-cols-[1fr_300px] gap-8">
+        <div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:gap-8">
           <div>
-            <div className="h-52 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center mb-6">
+            <div className="mb-6 flex h-52 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
               <BookOpen className="h-16 w-16 text-primary/30" />
             </div>
-            <h1 className="text-3xl font-bold mb-3">{course.title}</h1>
-            <p className="text-muted-foreground mb-6">{course.description}</p>
+            <h1 className="mb-3 text-2xl font-bold sm:text-3xl">{course.title}</h1>
+            <p className="mb-6 text-muted-foreground">{course.description}</p>
 
-            <h2 className="text-xl font-semibold mb-4">Contenido del curso</h2>
-            <p className="text-sm text-muted-foreground mb-4">{course.modules.length} módulos · {totalLessons} clases</p>
+            <h2 className="mb-4 text-xl font-semibold">Contenido del curso</h2>
+            <p className="mb-4 text-sm text-muted-foreground">{course.modules.length} módulos · {totalLessons} clases</p>
 
             <Accordion type="multiple" className="space-y-2">
               {course.modules.map(mod => (
-                <AccordionItem key={mod.id} value={mod.id} className="border rounded-lg overflow-hidden">
+                <AccordionItem key={mod.id} value={mod.id} className="overflow-hidden rounded-lg border">
                   <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                    <span className="font-medium">{mod.title}</span>
-                    <span className="text-xs text-muted-foreground ml-auto mr-2">{mod.lessons.length} clases</span>
+                    <span className="font-medium text-left">{mod.title}</span>
+                    <span className="ml-auto mr-2 text-xs text-muted-foreground">{mod.lessons.length} clases</span>
                   </AccordionTrigger>
                   <AccordionContent className="px-4 pb-3">
                     {mod.lessons.map(lesson => (
-                      <div key={lesson.id} className="flex items-center justify-between py-2 text-sm border-b last:border-0">
-                        <div className="flex items-center gap-2">
+                      <div key={lesson.id} className="flex flex-col gap-2 border-b py-2 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2 text-sm">
                           {lesson.isFreePreview || hasCourse ? (
                             <Play className="h-4 w-4 text-primary" />
                           ) : (
@@ -56,7 +56,7 @@ export default function HubCourseDetail() {
                           {lesson.isFreePreview && <Badge variant="secondary" className="text-xs">GRATIS</Badge>}
                         </div>
                         {(lesson.isFreePreview || hasCourse) && (
-                          <Button variant="ghost" size="sm" asChild>
+                          <Button variant="ghost" size="sm" asChild className="w-full sm:w-auto">
                             <Link to={`/${slug}/clase/${lesson.id}`}>Ver</Link>
                           </Button>
                         )}
@@ -68,9 +68,8 @@ export default function HubCourseDetail() {
             </Accordion>
           </div>
 
-          {/* Sidebar */}
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <div className="border rounded-xl p-6 space-y-4 bg-card">
+            <div className="space-y-4 rounded-xl border bg-card p-5 sm:p-6">
               <p className="text-3xl font-bold text-primary">${course.price}</p>
               {hasCourse ? (
                 <Button className="w-full" asChild>
@@ -81,7 +80,7 @@ export default function HubCourseDetail() {
                   Comprar curso
                 </Button>
               )}
-              <div className="text-sm text-muted-foreground space-y-1">
+              <div className="space-y-1 text-sm text-muted-foreground">
                 <p>✓ {totalLessons} clases</p>
                 <p>✓ Acceso de por vida</p>
                 <p>✓ Certificado de finalización</p>

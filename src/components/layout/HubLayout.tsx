@@ -19,21 +19,21 @@ export function HubLayout({ children, hubName, slug }: HubLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
-          <Link to={`/${slug}`} className="flex items-center gap-2 font-bold text-lg text-primary">
-            <AcroshubLogo className="h-6 w-6" />
-            {hubName}
+        <div className="container flex flex-col gap-3 py-3 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:py-0">
+          <Link to={`/${slug}`} className="flex items-center gap-2 font-bold text-base text-primary sm:text-lg">
+            <AcroshubLogo className="h-5 w-5 sm:h-6 sm:w-6" />
+            <span className="truncate">{hubName}</span>
           </Link>
-          <nav className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" asChild>
+          <nav className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:justify-end sm:overflow-visible sm:pb-0">
+            <Button variant="ghost" size="sm" asChild className="shrink-0">
               <Link to={`/${slug}/descubrir`}><Compass className="mr-1.5 h-4 w-4" />Descubrir</Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="ghost" size="sm" asChild className="shrink-0">
               <Link to={`/${slug}/mis-productos`}><Package className="mr-1.5 h-4 w-4" />Mis productos</Link>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2">
+                <Button variant="ghost" size="sm" className="gap-2 shrink-0">
                   <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-medium">
                     {alumno.name.charAt(0)}
                   </div>

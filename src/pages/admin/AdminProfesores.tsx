@@ -27,13 +27,13 @@ export default function AdminProfesores() {
       <div className="space-y-6 animate-fade-in">
         <h1 className="text-2xl font-bold">Profesores</h1>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_180px_160px]">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar por nombre o email..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <Select value={planFilter} onValueChange={setPlanFilter}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los planes</SelectItem>
               <SelectItem value="freemium">Freemium</SelectItem>
@@ -43,7 +43,7 @@ export default function AdminProfesores() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="activo">Activo</SelectItem>
@@ -52,7 +52,7 @@ export default function AdminProfesores() {
           </Select>
         </div>
 
-        <div className="border rounded-lg overflow-hidden bg-card">
+        <div className="overflow-x-auto rounded-lg border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -67,20 +67,22 @@ export default function AdminProfesores() {
             <TableBody>
               {filtered.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.email}</TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">{p.name}</TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">{p.email}</TableCell>
                   <TableCell><Badge variant="secondary" className="capitalize">{p.plan}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={p.status === 'activo' ? 'default' : 'destructive'} className="capitalize">{p.status}</Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{p.createdAt}</TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/admin/profesores/${p.id}`}>Ver</Link>
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => toast.success(`Profesor ${p.status === 'activo' ? 'suspendido' : 'activado'}`)}>
-                      {p.status === 'activo' ? 'Suspender' : 'Activar'}
-                    </Button>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">{p.createdAt}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/admin/profesores/${p.id}`}>Ver</Link>
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => toast.success(`Profesor ${p.status === 'activo' ? 'suspendido' : 'activado'}`)}>
+                        {p.status === 'activo' ? 'Suspender' : 'Activar'}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
