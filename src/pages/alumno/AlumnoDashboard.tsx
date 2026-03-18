@@ -2,8 +2,9 @@ import { getCurrentAlumno, hubs, courses } from "@/data/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, FolderOpen, LogOut, ChevronDown } from "lucide-react";
+import { FolderOpen, LogOut, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 
 export default function AlumnoDashboard() {
   const alumno = getCurrentAlumno();
@@ -20,7 +21,7 @@ export default function AlumnoDashboard() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 font-bold text-xl text-primary">
-            <BookOpen className="h-6 w-6" /> Acroshub
+            <AcroshubLogo className="h-7 w-7" /> Acroshub
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
