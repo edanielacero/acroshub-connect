@@ -9,7 +9,7 @@ const adminLinks = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/profesores", label: "Profesores", icon: Users },
   { to: "/admin/ventas", label: "Ventas", icon: DollarSign },
-  { to: "/admin/configuracion", label: "Configuración", icon: Settings },
+  { to: "/admin/configuracion", label: "Planes", icon: Settings },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
