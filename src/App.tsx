@@ -18,6 +18,8 @@ import AdminConfiguracion from "./pages/admin/AdminConfiguracion";
 import ProfesorDashboard from "./pages/profesor/ProfesorDashboard";
 import ProfesorHubs from "./pages/profesor/ProfesorHubs";
 import HubEditor from "./pages/profesor/HubEditor";
+import ProfesorHubCursos from "./pages/profesor/ProfesorHubCursos";
+import ProfesorHubEbooks from "./pages/profesor/ProfesorHubEbooks";
 import CourseEditor from "./pages/profesor/CourseEditor";
 import ProfesorAlumnos from "./pages/profesor/ProfesorAlumnos";
 import ProfesorAlumnoDetail from "./pages/profesor/ProfesorAlumnoDetail";
@@ -57,6 +59,8 @@ const App = () => (
           <Route path="/dashboard" element={<ProfesorDashboard />} />
           <Route path="/dashboard/hubs" element={<ProfesorHubs />} />
           <Route path="/dashboard/hubs/:id" element={<HubEditor />} />
+          <Route path="/dashboard/hubs/:id/cursos" element={<ProfesorHubCursos />} />
+          <Route path="/dashboard/hubs/:id/ebooks" element={<ProfesorHubEbooks />} />
           <Route path="/dashboard/cursos/:id" element={<CourseEditor />} />
           <Route path="/dashboard/alumnos" element={<ProfesorAlumnos />} />
           <Route path="/dashboard/alumnos/:id" element={<ProfesorAlumnoDetail />} />

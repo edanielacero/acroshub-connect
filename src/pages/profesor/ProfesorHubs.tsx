@@ -165,11 +165,17 @@ export default function ProfesorHubs() {
                 <h3 className="text-lg font-semibold">{hub.name}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{hub.description}</p>
                 <p className="mt-2 text-xs text-muted-foreground">{hub.coursesCount} cursos · {hub.studentsCount} alumnos</p>
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <Button variant="outline" size="sm" asChild className="flex-1">
-                    <Link to={`/dashboard/hubs/${hub.id}`}>Editar</Link>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Button variant="default" size="sm" asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                    <Link to={`/dashboard/hubs/${hub.id}/cursos`}>Cursos</Link>
                   </Button>
-                  <Button variant="ghost" size="sm" asChild className="flex-1">
+                  <Button variant="default" size="sm" asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                    <Link to={`/dashboard/hubs/${hub.id}/ebooks`}>Ebooks</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link to={`/dashboard/hubs/${hub.id}`}>Editar HUB</Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild className="w-full">
                     <Link to={`/${hub.slug}`}>Ver como alumno</Link>
                   </Button>
                 </div>
