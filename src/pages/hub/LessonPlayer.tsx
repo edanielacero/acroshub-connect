@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation, useSearchParams } from "react-router-dom";
 import { hubs, courses, comments, getCurrentAlumno } from "@/data/mockData";
 import { HubLayout } from "@/components/layout/HubLayout";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ export default function LessonPlayer() {
   const hub = hubs.find(h => h.slug === slug);
   const alumno = getCurrentAlumno();
   const { demoMode, isOwner } = usePreview();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const highlightCommentId = searchParams.get('highlightCommentId');
   const [comment, setComment] = useState("");
   const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
@@ -54,6 +57,30 @@ export default function LessonPlayer() {
     setPrevDemoMode(demoMode);
   }, [demoMode, prevDemoMode, isOwner, alumno.purchasedCourses, foundCourse.id, foundLesson?.isFreePreview, slug]);
 
+  // Comment automatic scroller logic
+  useEffect(() => {
+    if (location.hash === '#comentarios') {
+      const comentariosSection = document.getElementById('comentarios');
+      if (comentariosSection) {
+        setTimeout(() => {
+          comentariosSection.scrollIntoView({ behavior: 'smooth' });
+        }, 500); // Wait for potential layout shifts / renders
+      }
+    }
+  }, [location.hash, foundLesson?.id]); // Re-trigger if lesson changes while hash remains #comentarios
+
+  // Highlight scroller logic
+  useEffect(() => {
+    if (highlightCommentId) {
+      const commentEl = document.getElementById(`comment-${highlightCommentId}`);
+      if (commentEl) {
+        setTimeout(() => {
+          commentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 600); // 100ms after the general #comentarios scroller
+      }
+    }
+  }, [highlightCommentId, foundLesson?.id]);
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allLessons = foundCourse.modules.flatMap((m: any) => m.lessons);
   const currentIdx = allLessons.findIndex((l: Lesson) => l.id === id);
@@ -152,7 +179,7 @@ export default function LessonPlayer() {
               </Accordion>
             )}
 
-            <div className="space-y-4">
+            <section id="comentarios" className="space-y-4 pt-4">
               <h3 className="flex items-center gap-2 font-semibold"><MessageSquare className="h-5 w-5" />Comentarios</h3>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Textarea placeholder="Escribe un comentario..." value={comment} onChange={e => setComment(e.target.value)} className="flex-1" rows={2} />
@@ -161,8 +188,9 @@ export default function LessonPlayer() {
               <div className="space-y-4">
                 {parentComments.map(c => {
                   const replies = lessonComments.filter(r => r.parentId === c.id);
+                  const isHighlighted = highlightCommentId === c.id;
                   return (
-                    <div key={c.id} className="space-y-2">
+                    <div key={c.id} id={`comment-${c.id}`} className={`space-y-2 p-4 rounded-xl transition-all duration-500 border ${isHighlighted ? 'bg-primary/10 border-primary ring-2 ring-primary ring-offset-1 shadow-md' : 'border-transparent'}`}>
                       <div className="flex gap-3">
                         <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">{c.userName.charAt(0)}</div>
                         <div className="flex-1 min-w-0">
@@ -184,7 +212,7 @@ export default function LessonPlayer() {
                   );
                 })}
               </div>
-            </div>
+            </section>
 
             <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:justify-between">
               {prevLesson ? (

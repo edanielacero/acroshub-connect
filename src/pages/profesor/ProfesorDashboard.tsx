@@ -1,6 +1,6 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
 import { MetricCard } from "@/components/shared/MetricCard";
-import { getCurrentProfesor, sales, courses, comments } from "@/data/mockData";
+import { getCurrentProfesor, sales, courses, getUnrepliedComments, getRelativeTime, hubs } from "@/data/mockData";
 import { Users, DollarSign, BookOpen, Crown, Calendar, AlertCircle, AlertTriangle, CalendarClock, MessageSquare } from "lucide-react";
 import { parseISO, differenceInDays, addMonths } from "date-fns";
 import { formatDateProject } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 export default function ProfesorDashboard() {
   const prof = getCurrentProfesor();
@@ -29,15 +30,18 @@ export default function ProfesorDashboard() {
   }).filter(s => s.daysLeft >= 0 && s.daysLeft <= 7)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
-  // "Comentarios no leídos" (Comentarios de alumnos en los cursos dictados por él)
-  const profLessonIds = new Set(
-    profCourses.flatMap(c => c.modules.flatMap(m => m.lessons.map(l => l.id)))
-  );
-  
-  const unreadComments = comments
-    .filter(c => profLessonIds.has(c.lessonId) && c.userId !== prof.id)
-    .sort((a, b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime())
-    .slice(0, 5);
+  // "Comentarios sin responder"
+  const unreadComments = getUnrepliedComments(prof.id).slice(0, 5);
+
+  const getCommentLocation = (lessonId: string) => {
+    for (const course of profCourses) {
+      for (const mod of course.modules) {
+        const lesson = mod.lessons.find(l => l.id === lessonId);
+        if (lesson) return { courseTitle: course.title, lessonTitle: lesson.title, courseId: course.id, hubId: course.hubId };
+      }
+    }
+    return null;
+  };
 
   return (
     <ProfesorLayout>
@@ -78,7 +82,7 @@ export default function ProfesorDashboard() {
           <MetricCard title="Cursos" value={profCourses.length} icon={<BookOpen className="h-6 w-6" />} />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2 pt-6 border-t mt-8">
+        <div className="space-y-6 pt-6 border-t mt-8">
           {/* Alumnos por renovar */}
           <Card>
             <CardHeader className="bg-muted/30 pb-4 border-b">
@@ -122,37 +126,58 @@ export default function ProfesorDashboard() {
             </CardContent>
           </Card>
 
-          {/* Comentarios no leídos */}
+          {/* Comentarios sin responder */}
           <Card>
-            <CardHeader className="bg-muted/30 pb-4 border-b">
+            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b bg-muted/30">
               <CardTitle className="text-lg flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" /> Comentarios No Leídos
+                <MessageSquare className="h-5 w-5 text-primary" /> Comentarios sin responder
               </CardTitle>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium" size="sm" asChild>
+                <Link to="/dashboard/comentarios">Responder Comentarios</Link>
+              </Button>
             </CardHeader>
             <CardContent className="p-0">
               {unreadComments.length > 0 ? (
-                <ul className="divide-y divide-border">
-                  {unreadComments.map(comment => (
-                    <li key={comment.id} className="p-4 hover:bg-muted/20 transition-colors">
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex flex-col gap-1 w-full">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold">{comment.userName}</p>
-                            <span className="text-xs text-muted-foreground">{formatDateProject(comment.createdAt)}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 italic">"{comment.text}"</p>
-                          <div className="flex justify-end mt-2">
-                            <Button variant="link" size="sm" className="h-auto p-0 text-primary">Responder</Button>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="p-8 text-center text-sm text-muted-foreground flex items-center justify-center">
-                  Tu bandeja de entrada está limpia. No hay preguntas sin leer.
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Alumno</TableHead>
+                        <TableHead>Comentario</TableHead>
+                        <TableHead>Ubicación</TableHead>
+                        <TableHead>Fecha</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {unreadComments.map(comment => {
+                        const loc = getCommentLocation(comment.lessonId);
+                        const hub = hubs.find(h => h.id === loc?.hubId);
+                        return (
+                          <TableRow key={comment.id}>
+                            <TableCell className="font-medium">{comment.userName}</TableCell>
+                            <TableCell>
+                              <div className="max-w-[150px] truncate" title={comment.text}>
+                                {comment.text.length > 50 ? comment.text.substring(0, 47) + '...' : comment.text}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                {loc ? `${loc.courseTitle} → ${loc.lessonTitle}` : 'Desconocido'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
+                              {getRelativeTime(comment.createdAt)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  🎉 No tienes comentarios pendientes
+                </p>
               )}
             </CardContent>
           </Card>

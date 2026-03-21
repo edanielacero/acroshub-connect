@@ -7,9 +7,38 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function ProfesorConfiguracion() {
   const prof = getCurrentProfesor();
+  
+  // Password Change States
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const handleChangePassword = () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Todos los campos son obligatorios");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Las contraseñas nuevas no coinciden");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    
+    toast.success("Contraseña actualizada exitosamente");
+    setIsPasswordDialogOpen(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
 
   return (
     <ProfesorLayout>
@@ -26,9 +55,39 @@ export default function ProfesorConfiguracion() {
               <Input defaultValue={prof.emergencyEmail || ''} type="email" />
               <p className="text-xs text-muted-foreground">En caso de emergencia contactaremos aquí</p>
             </div>
-            <div className="space-y-2">
-              <Label>Contraseña</Label>
-              <Button variant="outline" size="sm" className="w-full sm:w-auto">Cambiar contraseña</Button>
+            <div className="space-y-3 pt-4 border-t mt-4">
+              <Label className="block text-base font-medium">Contraseña</Label>
+              <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">Cambiar contraseña</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Cambiar Contraseña</DialogTitle>
+                    <DialogDescription>
+                      Ingresa tu contraseña actual y la nueva contraseña que deseas usar para tu cuenta.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="current-pwd">Contraseña Actual</Label>
+                      <Input id="current-pwd" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-pwd">Nueva Contraseña</Label>
+                      <Input id="new-pwd" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-pwd">Confirmar Nueva Contraseña</Label>
+                      <Input id="confirm-pwd" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleChangePassword}>Actualizar contraseña</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </CardContent>
         </Card>

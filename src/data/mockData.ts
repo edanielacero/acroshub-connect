@@ -90,6 +90,7 @@ export interface Comment {
   text: string;
   createdAt: string;
   parentId?: string;
+  isRead?: boolean;
 }
 
 export interface Sale {
@@ -233,11 +234,11 @@ export const courses: Course[] = [
 ];
 
 export const comments: Comment[] = [
-  { id: 'com-1', lessonId: 'lesson-1', userId: 'alu-1', userName: 'Ana López', text: '¡Excelente clase! Muy bien explicado.', createdAt: '2025-02-15T10:30:00Z' },
-  { id: 'com-2', lessonId: 'lesson-1', userId: 'alu-2', userName: 'Pedro Sánchez', text: 'Tengo una duda sobre el stop loss, ¿podrían explicar más?', createdAt: '2025-02-16T14:20:00Z' },
-  { id: 'com-3', lessonId: 'lesson-1', userId: 'prof-1', userName: 'Carlos Mendoza', text: '¡Claro Pedro! El stop loss lo cubrimos en detalle en el módulo 3. ¡No te lo pierdas!', createdAt: '2025-02-16T15:00:00Z', parentId: 'com-2' },
-  { id: 'com-4', lessonId: 'lesson-1', userId: 'alu-4', userName: 'Diego Torres', text: 'Gracias por este contenido, muy valioso.', createdAt: '2025-02-17T09:15:00Z' },
-  { id: 'com-5', lessonId: 'lesson-5', userId: 'alu-1', userName: 'Ana López', text: 'El análisis técnico es fascinante.', createdAt: '2025-02-18T11:00:00Z' },
+  { id: 'com-1', lessonId: 'lesson-1', userId: 'alu-1', userName: 'Ana López', text: '¡Excelente clase! Muy bien explicado.', createdAt: '2025-02-15T10:30:00Z', isRead: true },
+  { id: 'com-2', lessonId: 'lesson-1', userId: 'alu-2', userName: 'Pedro Sánchez', text: 'Tengo una duda sobre el stop loss, ¿podrían explicar más?', createdAt: '2025-02-16T14:20:00Z', isRead: false },
+  { id: 'com-3', lessonId: 'lesson-1', userId: 'prof-1', userName: 'Carlos Mendoza', text: '¡Claro Pedro! El stop loss lo cubrimos en detalle en el módulo 3. ¡No te lo pierdas!', createdAt: '2025-02-16T15:00:00Z', parentId: 'com-2', isRead: true },
+  { id: 'com-4', lessonId: 'lesson-1', userId: 'alu-4', userName: 'Diego Torres', text: 'Gracias por este contenido, muy valioso.', createdAt: '2025-02-17T09:15:00Z', isRead: false },
+  { id: 'com-5', lessonId: 'lesson-5', userId: 'alu-1', userName: 'Ana López', text: 'El análisis técnico es fascinante.', createdAt: '2025-02-18T11:00:00Z', isRead: false },
 ];
 
 export const sales: Sale[] = [
@@ -340,3 +341,29 @@ export const lessonProgress: StudentProgress[] = [
 
 export const getCurrentProfesor = () => profesores[0]; // Carlos Mendoza
 export const getCurrentAlumno = () => alumnos[0]; // Ana López
+
+export const getRelativeTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 60) return `Hace ${diffMins}m`;
+  if (diffHours < 24) return `Hace ${diffHours}h`;
+  if (diffDays < 7) return `Hace ${diffDays}d`;
+  return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+export const getUnrepliedComments = (profesorId: string) => {
+  const profCourses = courses.filter(c => c.profesorId === profesorId);
+  const profLessonIds = new Set(profCourses.flatMap(c => c.modules.flatMap(m => m.lessons.map(l => l.id))));
+  
+  return comments.filter(c => 
+    profLessonIds.has(c.lessonId) &&
+    !c.parentId && // is main comment
+    c.userId !== profesorId && // Not written by the professor themselves
+    !comments.some(reply => reply.parentId === c.id && reply.userId === profesorId) // No reply from professor
+  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+};

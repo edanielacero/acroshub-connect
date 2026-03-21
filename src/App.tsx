@@ -22,6 +22,8 @@ import ProfesorHubCursos from "./pages/profesor/ProfesorHubCursos";
 import ProfesorHubEbooks from "./pages/profesor/ProfesorHubEbooks";
 import CourseEditor from "./pages/profesor/CourseEditor";
 import EbookEditor from "./pages/profesor/EbookEditor";
+import ProfesorComentarios from "./pages/profesor/ProfesorComentarios";
+import ProfesorResponderComentarios from "./pages/profesor/ProfesorResponderComentarios";
 import ProfesorAlumnos from "./pages/profesor/ProfesorAlumnos";
 import ProfesorAlumnoDetail from "./pages/profesor/ProfesorAlumnoDetail";
 import ProfesorVentas from "./pages/profesor/ProfesorVentas";
@@ -65,6 +67,8 @@ const App = () => (
           <Route path="/dashboard/hubs/:id/ebooks" element={<ProfesorHubEbooks />} />
           <Route path="/dashboard/cursos/:id" element={<CourseEditor />} />
           <Route path="/dashboard/ebooks/:id" element={<EbookEditor />} />
+          <Route path="/dashboard/comentarios" element={<ProfesorComentarios />} />
+          <Route path="/dashboard/comentarios/responder" element={<ProfesorResponderComentarios />} />
           <Route path="/dashboard/alumnos" element={<ProfesorAlumnos />} />
           <Route path="/dashboard/alumnos/:id" element={<ProfesorAlumnoDetail />} />
           <Route path="/dashboard/ventas" element={<ProfesorVentas />} />
