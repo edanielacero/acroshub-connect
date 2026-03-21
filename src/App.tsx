@@ -31,6 +31,7 @@ import HubCourseDetail from "./pages/hub/HubCourseDetail";
 import HubDiscover from "./pages/hub/HubDiscover";
 import HubMyProducts from "./pages/hub/HubMyProducts";
 import LessonPlayer from "./pages/hub/LessonPlayer";
+import { PreviewProvider } from "./components/layout/PreviewProvider";
 
 import AlumnoDashboard from "./pages/alumno/AlumnoDashboard";
 
@@ -71,11 +72,11 @@ const App = () => (
           <Route path="/mi-cuenta" element={<AlumnoDashboard />} />
 
           {/* Hub public */}
-          <Route path="/:slug" element={<HubLanding />} />
-          <Route path="/:slug/curso/:id" element={<HubCourseDetail />} />
-          <Route path="/:slug/descubrir" element={<HubDiscover />} />
-          <Route path="/:slug/mis-productos" element={<HubMyProducts />} />
-          <Route path="/:slug/clase/:id" element={<LessonPlayer />} />
+          <Route path="/:slug" element={<PreviewProvider><HubLanding /></PreviewProvider>} />
+          <Route path="/:slug/curso/:id" element={<PreviewProvider><HubCourseDetail /></PreviewProvider>} />
+          <Route path="/:slug/descubrir" element={<PreviewProvider><HubDiscover /></PreviewProvider>} />
+          <Route path="/:slug/mis-productos" element={<PreviewProvider><HubMyProducts /></PreviewProvider>} />
+          <Route path="/:slug/clase/:id" element={<PreviewProvider><LessonPlayer /></PreviewProvider>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

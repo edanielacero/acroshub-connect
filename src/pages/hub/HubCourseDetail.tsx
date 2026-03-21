@@ -1,10 +1,11 @@
 import { useParams, Link } from "react-router-dom";
 import { hubs, courses, getCurrentAlumno } from "@/data/mockData";
 import { HubLayout } from "@/components/layout/HubLayout";
+import { usePreview } from "@/components/layout/PreviewProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Lock, Play, ArrowLeft, BookOpen } from "lucide-react";
+import { Lock, Play, ArrowLeft, BookOpen, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function HubCourseDetail() {
@@ -12,7 +13,10 @@ export default function HubCourseDetail() {
   const hub = hubs.find(h => h.slug === slug);
   const course = courses.find(c => c.id === id);
   const alumno = getCurrentAlumno();
-  const hasCourse = alumno.purchasedCourses.includes(id || '');
+  const { demoMode, isOwner } = usePreview();
+  
+  // STRICT OVERRIDE: If a professor is simulating, their decision overrides any native array mock data!
+  const hasCourse = isOwner ? (demoMode === 'con-acceso') : alumno.purchasedCourses.includes(id || '');
 
   if (!hub || !course) return <div className="min-h-screen flex items-center justify-center"><p>No encontrado</p></div>;
 
@@ -70,17 +74,24 @@ export default function HubCourseDetail() {
 
           <div className="lg:sticky lg:top-24 lg:self-start">
             <div className="space-y-4 rounded-xl border bg-card p-5 sm:p-6">
-              <p className="text-3xl font-bold text-primary">${course.price}</p>
+              {!hasCourse && <p className="text-3xl font-bold text-primary">${course.price}</p>}
+              
               {hasCourse ? (
-                <Button className="w-full" asChild>
-                  <Link to={`/${slug}/clase/${course.modules[0]?.lessons[0]?.id}`}>Acceder al curso</Link>
-                </Button>
+                <div className="space-y-4">
+                  <div className="bg-success/10 text-success p-3 rounded-lg flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle className="h-4 w-4" />
+                    Ya tienes acceso a este curso
+                  </div>
+                  <Button className="w-full" asChild>
+                    <Link to={`/${slug}/clase/${course.modules[0]?.lessons[0]?.id}`}>Acceder al curso</Link>
+                  </Button>
+                </div>
               ) : (
-                <Button className="w-full" onClick={() => toast.success("¡Compra simulada! Ahora tienes acceso.")}>
+                <Button className="w-full" onClick={() => toast.info("Redirigiendo a pasarela de pago (Stripe/WhatsApp)...")}>
                   Comprar curso
                 </Button>
               )}
-              <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="space-y-1 text-sm text-muted-foreground pt-2">
                 <p>✓ {totalLessons} clases</p>
                 <p>✓ Acceso de por vida</p>
                 <p>✓ Certificado de finalización</p>

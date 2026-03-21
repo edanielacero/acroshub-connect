@@ -6,17 +6,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowLeft, ArrowRight, CheckCircle, FileText, MessageSquare, Play } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { usePreview } from "@/components/layout/PreviewProvider";
 import type { Lesson } from "@/data/mockData";
 
 export default function LessonPlayer() {
   const { slug, id } = useParams();
   const hub = hubs.find(h => h.slug === slug);
   const alumno = getCurrentAlumno();
+  const { demoMode, isOwner } = usePreview();
   const [comment, setComment] = useState("");
   const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [prevDemoMode, setPrevDemoMode] = useState(demoMode);
 
   let foundLesson: Lesson | null = null;
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
@@ -34,6 +37,22 @@ export default function LessonPlayer() {
   if (!hub || !foundLesson || !foundCourse || !foundModule) {
     return <div className="min-h-screen flex items-center justify-center"><p>Clase no encontrada</p></div>;
   }
+
+  // STRICT OVERRIDE: Eject simulated teacher to Sales page if they turn off access mid-lesson
+  // By analyzing the transition, we guarantee they get kicked back to the sales page 
+  // without breaking the ability to test `isFreePreview` links subsequently.
+  useEffect(() => {
+    if (prevDemoMode === 'con-acceso' && demoMode === 'sin-acceso') {
+      window.location.href = `/${slug}/curso/${foundCourse.id}`;
+    } else {
+      // Normal security check on initial load for locked lessons
+      const actuallyHasAccess = isOwner ? (demoMode === 'con-acceso') : alumno.purchasedCourses.includes(foundCourse.id);
+      if (!actuallyHasAccess && !foundLesson?.isFreePreview) {
+        window.location.href = `/${slug}/curso/${foundCourse.id}`;
+      }
+    }
+    setPrevDemoMode(demoMode);
+  }, [demoMode, prevDemoMode, isOwner, alumno.purchasedCourses, foundCourse.id, foundLesson?.isFreePreview, slug]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allLessons = foundCourse.modules.flatMap((m: any) => m.lessons);
@@ -68,6 +87,9 @@ export default function LessonPlayer() {
   return (
     <HubLayout hubName={hub.name} slug={hub.slug}>
       <div className="container py-6">
+        <Link to={`/${slug}/curso/${foundCourse.id}`} className="mb-6 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Volver a {foundCourse.title}
+        </Link>
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
             <div className="aspect-video rounded-xl bg-foreground/5 flex items-center justify-center">

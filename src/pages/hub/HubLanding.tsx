@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
-import { hubs, courses, profesores } from "@/data/mockData";
+import { hubs, courses, profesores, getCurrentAlumno } from "@/data/mockData";
 import { HubLayout } from "@/components/layout/HubLayout";
+import { usePreview } from "@/components/layout/PreviewProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FolderOpen } from "lucide-react";
@@ -8,6 +9,9 @@ import { BookOpen, FolderOpen } from "lucide-react";
 export default function HubLanding() {
   const { slug } = useParams();
   const hub = hubs.find(h => h.slug === slug);
+  const { demoMode, isOwner } = usePreview();
+  const alumno = getCurrentAlumno();
+
   if (!hub) return <div className="min-h-screen flex items-center justify-center"><p>HUB no encontrado</p></div>;
 
   const hubCourses = courses.filter(c => c.hubId === hub.id);
@@ -30,23 +34,26 @@ export default function HubLanding() {
         <div className="container">
           <h2 className="mb-6 text-2xl font-bold">Cursos disponibles</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {hubCourses.map(course => (
+            {hubCourses.map(course => {
+              const hasCourse = isOwner ? (demoMode === 'con-acceso') : alumno.purchasedCourses.includes(course.id);
+              
+              return (
               <Card key={course.id} className="overflow-hidden hover:shadow-md transition-shadow">
                 <div className="flex h-40 items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
                   <BookOpen className="h-12 w-12 text-primary/30" />
                 </div>
-                <CardContent className="p-5">
+                <CardContent className="p-5 flex flex-col h-[calc(100%-10rem)]">
                   <h3 className="text-lg font-semibold">{course.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground flex-1">{course.description}</p>
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-xl font-bold text-primary">${course.price}</span>
-                    <Button size="sm" asChild className="w-full sm:w-auto">
-                      <Link to={`/${slug}/curso/${course.id}`}>Ver curso</Link>
+                    {!hasCourse && <span className="text-xl font-bold text-primary">${course.price}</span>}
+                    <Button size="sm" asChild className={hasCourse ? "w-full" : "w-full sm:w-auto"}>
+                      <Link to={`/${slug}/curso/${course.id}`}>{hasCourse ? 'Continuar curso' : 'Ver curso'}</Link>
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         </div>
       </section>
