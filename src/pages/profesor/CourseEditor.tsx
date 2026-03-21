@@ -27,7 +27,7 @@ export default function CourseEditor() {
       <div className="space-y-4 animate-fade-in">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button variant="ghost" size="icon" asChild>
-            <Link to={`/dashboard/hubs/${course.hubId}`}><ArrowLeft className="h-5 w-5" /></Link>
+            <Link to={`/dashboard/hubs/${course.hubId}/cursos`}><ArrowLeft className="h-5 w-5" /></Link>
           </Button>
           <Input defaultValue={course.title} className="px-0 text-xl font-bold border-none shadow-none focus-visible:ring-0 sm:text-2xl" />
         </div>
