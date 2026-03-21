@@ -159,6 +159,8 @@ Profesor
 - El profesor u otros alumnos pueden responder
 - Un comentario principal puede tener varias respuestas
 - **Regla crítica:** Las respuestas NO pueden tener otras respuestas (sin bucle)
+- **Gestión Docente:** El profesor cuenta con una bandeja de entrada centralizada ("Comentarios sin responder") con filtros y acceso rápido.
+- **Modo Respuesta:** Al contestar, el profesor ingresa a una "Previsualización del Reproductor" limpia y aislada, que realiza auto-scroll y resalta el comentario objetivo para mantener contexto visual exacto de la clase sin salir del entorno de administración.
 
 ### 2.6 Sistema de Quizzes
 
