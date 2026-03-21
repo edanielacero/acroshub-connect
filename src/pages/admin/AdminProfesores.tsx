@@ -14,14 +14,8 @@ export default function AdminProfesores() {
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [profs, setProfs] = useState(profesores);
 
-  const updateProf = (id: string, field: 'plan' | 'status', value: string) => {
-    setProfs(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
-    toast.success(`${field === 'plan' ? 'Plan' : 'Estado'} actualizado`);
-  };
-
-  const filtered = profs.filter(p => {
+  const filtered = profesores.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.email.toLowerCase().includes(search.toLowerCase());
     const matchPlan = planFilter === "todos" || p.plan === planFilter;
     const matchStatus = statusFilter === "todos" || p.status === statusFilter;
@@ -75,27 +69,11 @@ export default function AdminProfesores() {
                 <TableRow key={p.id}>
                   <TableCell className="font-medium whitespace-nowrap">{p.name}</TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap">{p.email}</TableCell>
+                  <TableCell><Badge variant="secondary" className="capitalize">{p.plan}</Badge></TableCell>
                   <TableCell>
-                    <Select value={p.plan} onValueChange={(val) => updateProf(p.id, 'plan', val)}>
-                      <SelectTrigger className="w-[125px] h-8 text-xs capitalize"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="freemium">Freemium</SelectItem>
-                        <SelectItem value="basico">Básico</SelectItem>
-                        <SelectItem value="pro">Pro</SelectItem>
-                        <SelectItem value="enterprise">Enterprise</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select value={p.status} onValueChange={(val) => updateProf(p.id, 'status', val)}>
-                      <SelectTrigger className={`w-[125px] h-8 text-xs font-medium capitalize ${p.status === 'activo' ? 'text-success' : 'text-destructive'}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="activo">Activo</SelectItem>
-                        <SelectItem value="suspendido">Suspendido</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Badge className={`capitalize text-white ${p.status === 'activo' ? 'bg-success hover:bg-success/80' : 'bg-destructive hover:bg-destructive/80'}`}>
+                      {p.status}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap">{p.createdAt}</TableCell>
                   <TableCell className="text-right">
