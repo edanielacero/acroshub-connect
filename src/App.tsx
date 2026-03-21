@@ -12,6 +12,7 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProfesores from "./pages/admin/AdminProfesores";
 import AdminProfesorDetail from "./pages/admin/AdminProfesorDetail";
+import AdminVentas from "./pages/admin/AdminVentas";
 import AdminConfiguracion from "./pages/admin/AdminConfiguracion";
 
 import ProfesorDashboard from "./pages/profesor/ProfesorDashboard";
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/profesores" element={<AdminProfesores />} />
           <Route path="/admin/profesores/:id" element={<AdminProfesorDetail />} />
+          <Route path="/admin/ventas" element={<AdminVentas />} />
           <Route path="/admin/configuracion" element={<AdminConfiguracion />} />
 
           {/* Profesor */}

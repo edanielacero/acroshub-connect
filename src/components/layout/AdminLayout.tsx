@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -8,6 +8,7 @@ import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 const adminLinks = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/profesores", label: "Profesores", icon: Users },
+  { to: "/admin/ventas", label: "Ventas", icon: DollarSign },
   { to: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];
 

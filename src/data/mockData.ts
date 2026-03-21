@@ -251,6 +251,21 @@ export const sales: Sale[] = [
   { id: 'sale-12', profesorId: 'prof-3', alumnoId: 'alu-11', alumnoName: 'Isabella Flores', courseId: 'course-6', courseTitle: 'Entrenamiento Funcional', amount: 29.99, method: 'manual', date: '2025-03-10' },
 ];
 
+export interface PlatformSubscription {
+  id: string;
+  profesorId: string;
+  planKey: string;
+  billingCycle: 'mensual' | 'anual';
+  amount: number;
+  method: 'manual' | 'stripe';
+  date: string;
+}
+
+export const platformSubscriptions: PlatformSubscription[] = [
+  { id: 'psub-1', profesorId: 'prof-1', planKey: 'pro', billingCycle: 'anual', amount: 990, method: 'stripe', date: '2025-01-05' },
+  { id: 'psub-2', profesorId: 'prof-2', planKey: 'basico', billingCycle: 'mensual', amount: 29, method: 'stripe', date: '2025-02-15' },
+];
+
 // Current logged-in user simulation
 export type CurrentUserRole = 'admin' | 'profesor' | 'alumno' | null;
 
