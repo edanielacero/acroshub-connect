@@ -43,7 +43,6 @@ export default function ProfesorAlumnoDetail() {
   );
 
   // Modal States
-  const [isAddAccessOpen, setIsAddAccessOpen] = useState(false);
   const [isExtendOpen, setIsExtendOpen] = useState(false);
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,7 +191,6 @@ export default function ProfesorAlumnoDetail() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Productos con acceso</CardTitle>
-            <Button size="sm" onClick={() => setIsAddAccessOpen(true)}><Plus className="h-4 w-4 mr-1" /> Agregar acceso</Button>
           </CardHeader>
           <CardContent className="p-0">
             {activeProducts.length === 0 ? (
@@ -362,47 +360,6 @@ export default function ProfesorAlumnoDetail() {
       </div>
 
       {/* MODALS */}
-      <Dialog open={isAddAccessOpen} onOpenChange={setIsAddAccessOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Agregar acceso a producto</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Producto</Label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  {courses.filter(c => c.profesorId === prof.id).map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Origen</Label>
-              <Select defaultValue="manual">
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual</SelectItem>
-                  <SelectItem value="gift">Regalo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Fecha de expiración (opcional)</Label>
-              <Input type="date" />
-            </div>
-            <div className="space-y-2">
-              <Label>Notas (opcional)</Label>
-              <Input placeholder="Ej. Promoción especial..." />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddAccessOpen(false)}>Cancelar</Button>
-            <Button onClick={() => { toast.success("Acceso otorgado al alumno"); setIsAddAccessOpen(false); }}>Agregar acceso</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={isExtendOpen} onOpenChange={setIsExtendOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Extender acceso</DialogTitle></DialogHeader>
