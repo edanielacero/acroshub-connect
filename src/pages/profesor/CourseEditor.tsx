@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, GripVertical, Plus, Video, FileText, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, GripVertical, Plus, Video, FileText, AlertTriangle, Trash2, Paperclip, UploadCloud } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Lesson } from "@/data/mockData";
 
 export default function CourseEditor() {
@@ -19,6 +20,26 @@ export default function CourseEditor() {
   const course = courses.find(c => c.id === id);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(course?.modules[0]?.lessons[0] || null);
   const [videoTab, setVideoTab] = useState<'upload' | 'url'>('url');
+  
+  // Multiple files attachments
+  const [attachedFiles, setAttachedFiles] = useState([
+    { name: "guia-de-estudio.pdf", size: "2.4 MB" },
+    { name: "recursos-adicionales.zip", size: "15.1 MB" }
+  ]);
+  
+  // Create Module States
+  const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
+  const [newModuleName, setNewModuleName] = useState("");
+
+  const handleCreateModule = () => {
+    if (!newModuleName.trim()) {
+      toast.error("El nombre del módulo es requerido");
+      return;
+    }
+    toast.success(`Módulo "${newModuleName}" creado. Ya puedes agregarle contenido.`);
+    setIsModuleDialogOpen(false);
+    setNewModuleName("");
+  };
 
   if (!course) return <ProfesorLayout><p>Curso no encontrado</p></ProfesorLayout>;
 
@@ -36,7 +57,40 @@ export default function CourseEditor() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Módulos</h3>
-              <Button variant="ghost" size="sm"><Plus className="h-4 w-4" /></Button>
+              <Dialog open={isModuleDialogOpen} onOpenChange={setIsModuleDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" title="Añadir Módulo"><Plus className="h-4 w-4" /></Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Añadir nuevo módulo</DialogTitle>
+                    <DialogDescription>
+                      Los módulos agrupan múltiples clases para que el curso esté ordenado. Recomienda nombrar este módulo de forma clara.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="module-title">Nombre del Módulo</Label>
+                      <Input 
+                        id="module-title" 
+                        placeholder="Ej. Módulo 1: Introducción" 
+                        value={newModuleName}
+                        onChange={(e) => setNewModuleName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateModule();
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsModuleDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleCreateModule}>Añadir Módulo</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
             <Accordion type="multiple" defaultValue={course.modules.map(m => m.id)} className="space-y-1">
               {course.modules.map(mod => (
@@ -101,11 +155,43 @@ export default function CourseEditor() {
                   </Tabs>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><FileText className="h-4 w-4" />PDF adjunto</Label>
-                  <div className="rounded-lg border-2 border-dashed p-4 text-center text-sm text-muted-foreground">
-                    Subir PDF
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-2"><Paperclip className="h-4 w-4" />Archivos adjuntos</Label>
+                  
+                  {/* Zona de subida */}
+                  <div className="rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <UploadCloud className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Haz clic o arrastra tus archivos aquí</p>
+                        <p className="text-sm text-muted-foreground mt-1">PDF, DOC, ZIP, Audio, etc. (Máx. 50MB por archivo)</p>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Lista de archivos subidos */}
+                  {attachedFiles.length > 0 && (
+                    <div className="space-y-2 mt-4">
+                      {attachedFiles.map((file, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 bg-muted rounded-md shrink-0">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="truncate">
+                              <p className="text-sm font-medium truncate">{file.name}</p>
+                              <p className="text-xs text-muted-foreground">{file.size}</p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
