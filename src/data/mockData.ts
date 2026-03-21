@@ -11,7 +11,11 @@ export interface User {
 export interface Profesor extends User {
   role: 'profesor';
   plan: 'freemium' | 'basico' | 'pro' | 'enterprise';
-  status: 'activo' | 'suspendido';
+  status: 'activo' | 'freemium' | 'suspendido';
+  billingCycle: 'mensual' | 'anual' | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  scheduledDowngradePlan: string | null;
   stripeConnected: boolean;
   stripeEmail?: string;
   emergencyEmail?: string;
@@ -124,17 +128,17 @@ export const planConfigs: PlanConfig[] = [
 export const profesores: Profesor[] = [
   {
     id: 'prof-1', name: 'Carlos Mendoza', email: 'carlos@trading.com', role: 'profesor',
-    plan: 'pro', status: 'activo', stripeConnected: true, stripeEmail: 'carlos@stripe.com',
+    plan: 'pro', status: 'activo', billingCycle: 'anual', currentPeriodStart: '2025-01-05', currentPeriodEnd: '2026-01-05', scheduledDowngradePlan: null, stripeConnected: true, stripeEmail: 'carlos@stripe.com',
     emergencyEmail: 'carlos.emergencia@gmail.com', avatar: '', createdAt: '2024-08-15',
   },
   {
     id: 'prof-2', name: 'María García', email: 'maria@marketing.com', role: 'profesor',
-    plan: 'basico', status: 'activo', stripeConnected: true, stripeEmail: 'maria@stripe.com',
+    plan: 'basico', status: 'activo', billingCycle: 'mensual', currentPeriodStart: '2025-02-15', currentPeriodEnd: '2025-03-15', scheduledDowngradePlan: 'freemium', stripeConnected: true, stripeEmail: 'maria@stripe.com',
     emergencyEmail: 'maria.emergencia@gmail.com', avatar: '', createdAt: '2024-09-20',
   },
   {
     id: 'prof-3', name: 'Jorge Ramírez', email: 'jorge@fitness.com', role: 'profesor',
-    plan: 'freemium', status: 'suspendido', stripeConnected: false,
+    plan: 'freemium', status: 'suspendido', billingCycle: null, currentPeriodStart: null, currentPeriodEnd: null, scheduledDowngradePlan: null, stripeConnected: false,
     avatar: '', createdAt: '2025-01-10',
   },
 ];
@@ -253,17 +257,54 @@ export const sales: Sale[] = [
 
 export interface PlatformSubscription {
   id: string;
-  profesorId: string;
-  planKey: string;
+  tenantId: string;
+  type: "first_payment" | "renewal" | "upgrade" | "downgrade";
+  planFrom: string | null;
+  planTo: string;
   billingCycle: 'mensual' | 'anual';
   amount: number;
   method: 'manual' | 'stripe';
-  date: string;
+  notes: string | null;
+  createdAt: string;
 }
 
 export const platformSubscriptions: PlatformSubscription[] = [
-  { id: 'psub-1', profesorId: 'prof-1', planKey: 'pro', billingCycle: 'anual', amount: 990, method: 'stripe', date: '2025-01-05' },
-  { id: 'psub-2', profesorId: 'prof-2', planKey: 'basico', billingCycle: 'mensual', amount: 29, method: 'stripe', date: '2025-02-15' },
+  {
+    id: "ps1",
+    tenantId: "prof-1",
+    type: "first_payment",
+    planFrom: null,
+    planTo: "basico",
+    billingCycle: "mensual",
+    amount: 30,
+    method: "manual",
+    notes: null,
+    createdAt: "2024-01-15"
+  },
+  {
+    id: "ps2",
+    tenantId: "prof-1",
+    type: "upgrade",
+    planFrom: "basico",
+    planTo: "pro",
+    billingCycle: "mensual",
+    amount: 20,
+    method: "manual",
+    notes: "Upgrade mid-cycle, pagó diferencia",
+    createdAt: "2024-02-20"
+  },
+  {
+    id: "ps3",
+    tenantId: "prof-2",
+    type: "first_payment",
+    planFrom: null,
+    planTo: "basico",
+    billingCycle: "mensual",
+    amount: 29,
+    method: "stripe",
+    notes: null,
+    createdAt: "2025-02-15"
+  }
 ];
 
 // Current logged-in user simulation

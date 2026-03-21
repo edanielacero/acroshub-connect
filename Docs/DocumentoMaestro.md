@@ -2,7 +2,7 @@
 ### *Tu plataforma de cursos, sin comisiones*
 
 **Documento Maestro del Proyecto**
-Versión 2.0 | Marzo 2026 | Autor: Daniel – Founder
+Versión 3.0 | Marzo 2026 | Autor: Daniel – Founder
 
 ---
 
@@ -65,9 +65,10 @@ Acroshub es una plataforma SaaS multi-tenant para educadores digitales donde el 
 
 - Dueño y operador del SaaS
 - Ve todos los tenants (profesores), sus métricas, uso y estado
-- Activa/suspende/elimina cuentas de profesores manualmente
-- Configura límites de cada plan (freemium, básico, pro, enterprise) desde su panel
-- Cobra a los profesores de forma manual inicialmente (sin Stripe propio todavía)
+- Gestiona el estado de los profesores (Activo, Freemium, Suspendido)
+- Registra pagos y gestiona upgrades/downgrades de planes
+- Configura límites y precios (mensuales/anuales) de cada plan desde su panel
+- Cobra a los profesores de forma manual, registrando los pagos en el perfil de cada profesor
 - Agrega dominios custom para tenants enterprise via Vercel API
 
 #### Profesor (Tenant Owner)
@@ -91,7 +92,36 @@ Acroshub es una plataforma SaaS multi-tenant para educadores digitales donde el 
 - Puede comprar productos directamente desde el HUB del profesor
 - Recibe notificaciones por email cuando hay contenido nuevo
 
-### 2.2 Jerarquía de Contenido
+### 2.2 Estados del Profesor vs Planes
+
+Los **estados** y los **planes** son conceptos diferentes:
+
+#### Estados del Profesor
+
+| Estado | Descripción | El profesor puede... |
+|---|---|---|
+| **Activo** | Cuenta funcionando normalmente | Todo: crear contenido, gestionar alumnos, cobrar |
+| **Freemium** | Cuenta operativa pero con límites del plan gratuito | Operar dentro de los límites (5 alumnos, 1 curso, etc.) |
+| **Suspendido** | Cuenta bloqueada por razón disciplinaria o emergencia | NADA. No puede acceder a su panel. Alumnos tampoco pueden acceder. |
+
+**Cuándo usar cada uno:**
+- **Activo:** Profesor tiene un plan de pago vigente
+- **Freemium:** Profesor nuevo sin pagar, o profesor degradado por falta de pago
+- **Suspendido:** Solo en casos de emergencia (fraude, contenido ilegal, violación de términos, chargeback)
+
+#### Planes de Suscripción
+
+| Plan | Descripción |
+|---|---|
+| Freemium | Plan gratuito con límites estrictos |
+| Básico | Primer plan de pago |
+| Pro | Plan intermedio con más features |
+| Enterprise | Plan completo con dominio propio |
+| Mantenimiento | Plan especial de offboarding (read-only) |
+
+*Nota: Un profesor en estado "Activo" puede tener cualquier plan de pago. Un profesor en estado "Freemium" está en el plan gratuito.*
+
+### 2.3 Jerarquía de Contenido
 
 ```
 Profesor
@@ -114,21 +144,21 @@ Profesor
 | Bundle | Varios cursos y/o ebooks juntos |
 | HUB completo | Acceso a todo el contenido del HUB |
 
-### 2.3 Sistema de Videos
+### 2.4 Sistema de Videos
 
 | Fuente | Protección | Notas |
 |---|---|---|
 | Bunny.net CDN | URL firmada (~10 min expiración), sin descarga | Recomendado para contenido premium |
 | YouTube/Vimeo/Drive | Sin protección (URL visible) | Advertencia al profesor al importar |
 
-### 2.4 Sistema de Comentarios
+### 2.5 Sistema de Comentarios
 
 - Comentarios por clase con capacidad de respuesta
 - El profesor u otros alumnos pueden responder
 - Un comentario principal puede tener varias respuestas
 - **Regla crítica:** Las respuestas NO pueden tener otras respuestas (sin bucle)
 
-### 2.5 Sistema de Quizzes
+### 2.6 Sistema de Quizzes
 
 | Característica | Detalle |
 |---|---|
@@ -175,15 +205,16 @@ Profesor
 
 /admin                → Panel del Super Admin (Daniel)
 /admin/profesores     → Lista de profesores
-/admin/profesores/:id → Detalle de profesor
-/admin/configuracion  → Configuración de planes
+/admin/profesores/:id → Detalle de profesor (info, suscripción, historial de pagos)
+/admin/ventas         → Dashboard global de ventas (solo lectura, métricas y gráficas)
+/admin/configuracion  → Configuración de límites y precios de planes
 
 /dashboard            → Panel del Profesor
 /dashboard/hubs       → Lista de HUBs
 /dashboard/hubs/:id   → Editor de HUB
 /dashboard/cursos/:id → Editor de curso
 /dashboard/alumnos    → Gestión de alumnos
-/dashboard/ventas     → Reportes de ventas
+/dashboard/ventas     → Reportes de ventas del profesor
 /dashboard/config     → Configuración del profesor
 
 /mi-cuenta            → Dashboard del alumno (todos sus HUBs)
@@ -215,11 +246,14 @@ Profesor
 | id | UUID (PK) | Identificador único |
 | user_id | UUID (FK) | Referencia a users |
 | plan | ENUM | freemium / basico / pro / enterprise / mantenimiento |
-| status | ENUM | active / closed_to_new / maintenance / grace_1 / grace_2 / sunset / archived / deleted |
+| status | ENUM | active / freemium / suspended |
+| billing_cycle | ENUM | mensual / anual (null si freemium) |
+| current_period_start | TIMESTAMP | Inicio del ciclo de facturación actual |
+| current_period_end | TIMESTAMP | Fin del ciclo de facturación actual |
+| scheduled_downgrade_plan | TEXT | Plan al que bajará al final del ciclo (null si no hay downgrade) |
 | slug | TEXT | Subdominio del profesor (ej: "trading") |
 | emergency_email | TEXT | Email de contacto de emergencia |
 | stripe_account_id | TEXT | ID de cuenta Stripe Connect |
-| last_payment_at | TIMESTAMP | Último pago del profesor |
 | created_at | TIMESTAMP | Fecha de registro |
 
 #### Tabla: hubs
@@ -344,6 +378,21 @@ Profesor
 
 *Regla: Si parent_id != null, NO puede tener hijos (sin bucle)*
 
+#### Tabla: platform_subscriptions (Historial de pagos de profesores a Daniel)
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| id | UUID (PK) | Identificador único |
+| tenant_id | UUID (FK) | Referencia a tenants (Profesor) |
+| type | ENUM | first_payment / renewal / upgrade / downgrade |
+| plan_from | TEXT | Plan anterior (null si es first_payment) |
+| plan_to | TEXT | Plan nuevo |
+| billing_cycle | ENUM | mensual / anual |
+| amount | DECIMAL | Monto pagado por el profesor |
+| method | ENUM | manual / stripe |
+| notes | TEXT | Notas opcionales del admin |
+| created_at | TIMESTAMP | Fecha del registro de la venta |
+
 ### 3.5 Row Level Security (RLS) — CRÍTICO
 
 Todas las tablas con tenant_id deben tener RLS activado:
@@ -401,7 +450,72 @@ CREATE POLICY "student_access" ON lessons
 | Personalizar HUB | No | Colores/Logo | Sí | Completo |
 | Dominio propio | No | No | No | Sí (CNAME) |
 
-### 4.3 Flujo de Dinero
+### 4.3 Lógica de Suscripciones
+
+#### Tipos de transacción
+
+| Tipo | Descripción |
+|---|---|
+| **first_payment** | Primera vez que el profesor paga (pasa de Freemium a plan de pago) |
+| **renewal** | Renovación del mismo plan al final del ciclo |
+| **upgrade** | Subir de plan (ej: Básico → Pro) |
+| **downgrade** | Bajar de plan (ej: Pro → Básico) |
+
+#### Reglas de Upgrade
+
+**Regla única para todos los upgrades: pagar la diferencia, ciclo se reinicia.**
+
+| Caso | Cálculo | Nuevo ciclo |
+|---|---|---|
+| Mensual → Mensual | Precio nuevo - Precio actual | Empieza hoy (mensual) |
+| Anual → Anual | Precio nuevo - Precio actual | Empieza hoy (anual) |
+| Mensual → Anual | Precio anual - Precio mensual actual | Empieza hoy (anual) |
+
+**Ejemplos:**
+
+```
+MENSUAL → MENSUAL
+Tiene: Básico ($30/mes)
+Quiere: Pro ($50/mes)
+Paga: $50 - $30 = $20
+Nuevo ciclo: hoy → +1 mes
+
+ANUAL → ANUAL
+Tiene: Básico Anual ($300/año)
+Quiere: Pro Anual ($500/año)
+Paga: $500 - $300 = $200
+Nuevo ciclo: hoy → +1 año
+
+MENSUAL → ANUAL
+Tiene: Básico Mensual ($30/mes)
+Quiere: Pro Anual ($500/año)
+Paga: $500 - $30 = $470
+Nuevo ciclo: hoy → +1 año
+```
+
+#### Reglas de Downgrade
+
+**El downgrade se aplica al final del ciclo actual, no inmediatamente.**
+
+1. El admin registra el downgrade programado en el perfil del profesor
+2. El campo `scheduled_downgrade_plan` se llena con el plan destino
+3. El profesor ve un banner indicando: "Tu plan cambiará a [plan] el [fecha]"
+4. Al llegar la fecha de `current_period_end`:
+   - El plan cambia automáticamente
+   - El campo `scheduled_downgrade_plan` se limpia
+   - Si el nuevo plan es Freemium, el estado cambia a "freemium"
+
+**Restricción de ciclo:**
+- Un profesor con plan **anual** solo puede hacer downgrade a otro plan **anual** o a Freemium
+- Si quiere cambiar a mensual, debe esperar a que termine su anualidad
+
+#### Reglas de Renovación
+
+1. El profesor contacta a Daniel para renovar
+2. Daniel registra el pago con tipo `renewal`
+3. El campo `current_period_end` se extiende según el ciclo (mensual: +1 mes, anual: +1 año)
+
+### 4.4 Flujo de Dinero
 
 ```
 Alumno → paga → Profesor (Stripe Connect / métodos propios)
@@ -428,7 +542,7 @@ Profesor → paga suscripción → Daniel (manual inicialmente)
 
 ### 5.2 Flujo del Profesor
 
-1. Se registra en Acroshub (acceso freemium automático).
+1. Se registra en Acroshub (estado freemium automático).
 2. Crea su primer HUB y configura nombre/slug.
 3. Crea cursos, módulos y clases.
 4. Sube videos a Bunny.net o importa desde YouTube/Drive.
@@ -443,10 +557,14 @@ Profesor → paga suscripción → Daniel (manual inicialmente)
 
 1. Accede al panel de administración.
 2. Ve lista de todos los tenants (profesores).
-3. Activa/suspende cuentas según pagos recibidos.
-4. Configura límites de planes sin tocar código.
-5. Agrega dominios custom para tenants enterprise.
-6. Monitorea métricas globales de la plataforma.
+3. Entra al perfil de un profesor para:
+   - Ver su información y estadísticas
+   - Registrar pagos (primer pago, renovación, upgrade)
+   - Programar downgrades
+   - Ver historial de pagos
+   - Suspender cuenta (solo emergencias)
+4. En la vista global de Ventas, ve métricas y gráficas consolidadas.
+5. Configura límites y precios de planes desde Configuración.
 
 ---
 
@@ -460,7 +578,7 @@ El prototipo visual está completo en React + Vite con shadcn/ui. Las páginas y
 
 - ✅ Landing page con propuesta de valor
 - ✅ Auth UI (login/register)
-- ✅ Panel Admin con lista de profesores y configuración de planes
+- ✅ Panel Super Admin con gestión de profesores, configuración de planes y dashboard de Ventas
 - ✅ Panel Profesor con CRUD de HUBs, cursos, módulos, clases
 - ✅ Gestión de alumnos UI
 - ✅ Reportes de ventas UI
@@ -474,6 +592,7 @@ El prototipo visual está completo en React + Vite con shadcn/ui. Las páginas y
 - ⬜ Conectar Supabase Auth (email + password)
 - ⬜ Crear schema de base de datos con RLS
 - ⬜ Implementar queries con React Query + Supabase client
+- ⬜ Lógica de suscripciones (upgrades, downgrades, renovaciones)
 - ⬜ Subida de videos a Bunny.net CDN
 - ⬜ URLs firmadas para videos protegidos
 - ⬜ Integración Stripe Connect Express
@@ -489,6 +608,7 @@ El prototipo visual está completo en React + Vite con shadcn/ui. Las páginas y
 | P0 | Schema de DB + RLS | Media |
 | P0 | CRUD de HUBs, cursos, módulos, clases | Media |
 | P0 | Gestión de alumnos y enrollments manuales | Baja |
+| P0 | Registro de pagos y lógica de suscripciones | Media |
 | P1 | Subida de videos a Bunny.net | Media |
 | P1 | Reproductor con URLs firmadas | Media |
 | P2 | Stripe Connect para profesores | Alta |
@@ -506,7 +626,7 @@ El prototipo visual está completo en React + Vite con shadcn/ui. Las páginas y
 |---|---|---|
 | Semana 1 | Supabase Auth + Schema de DB + RLS | Auth funcional con 3 roles |
 | Semana 2 | CRUD de HUBs, cursos, módulos, clases conectado | Panel profesor funcional |
-| Semana 3 | Enrollments manuales + Panel admin conectado | MVP sin pagos funcionando |
+| Semana 3 | Enrollments manuales + Panel admin + Lógica de suscripciones | MVP sin pagos funcionando |
 
 ### 7.2 Fase 2: Videos y Contenido (Semanas 4-5)
 
@@ -577,7 +697,7 @@ Variables de entorno necesarias:
 Crea el schema de Supabase para Acroshub. Ejecutar en el SQL Editor de Supabase.
 
 Tablas necesarias:
-1. tenants (id, user_id FK, plan, status, slug, emergency_email, stripe_account_id, last_payment_at, created_at)
+1. tenants (id, user_id FK, plan, status, billing_cycle, current_period_start, current_period_end, scheduled_downgrade_plan, slug, emergency_email, stripe_account_id, created_at)
 2. hubs (id, tenant_id FK, name, slug, description, colors JSONB, logo_url, cover_url, created_at)
 3. products (id, hub_id FK, type ENUM, name, description, price_one_time, price_subscription, stripe_price_id, created_at)
 4. courses (id, product_id FK, hub_id FK)
@@ -589,9 +709,19 @@ Tablas necesarias:
 10. lesson_progress (id, user_id FK, lesson_id FK, tenant_id FK, completed_at)
 11. quiz_attempts (id, user_id FK, quiz_id FK, tenant_id FK, score, answers JSONB, attempted_at)
 12. comments (id, lesson_id FK, user_id FK, tenant_id FK, parent_id FK nullable, content, created_at)
+13. platform_subscriptions (id, tenant_id FK, type ENUM, plan_from, plan_to, billing_cycle ENUM, amount DECIMAL, method ENUM, notes, created_at)
+
+ENUMs necesarios:
+- plan: freemium, basico, pro, enterprise, mantenimiento
+- status: active, freemium, suspended
+- billing_cycle: mensual, anual
+- product_type: course, ebook, bundle, hub_access
+- enrollment_origin: stripe, manual, gift
+- video_source: bunny, youtube, vimeo, drive
+- subscription_type: first_payment, renewal, upgrade, downgrade
+- payment_method: manual, stripe
 
 Incluir:
-- ENUMs para plan, status, type, origin, video_source
 - Foreign keys con ON DELETE CASCADE donde corresponda
 - Índices en campos de búsqueda frecuente
 - RLS policies para aislamiento de tenants
@@ -625,7 +755,30 @@ Conectar estos hooks a las páginas existentes:
 - /dashboard/hubs/:id (editor)
 ```
 
-### 9.4 Prompt - Upload de Videos a Bunny.net
+### 9.4 Prompt - Lógica de Suscripciones
+
+```
+Implementa la lógica de suscripciones para el panel de admin.
+
+Archivo: src/hooks/useSubscriptions.ts
+
+Funcionalidades:
+1. useRegisterPayment() - mutation para registrar pagos (first_payment, renewal, upgrade, downgrade)
+2. useTenantSubscription(tenantId) - obtiene datos de suscripción del tenant
+3. useSubscriptionHistory(tenantId) - historial de pagos del tenant
+4. useGlobalSales() - métricas globales para dashboard de ventas
+5. useScheduleDowngrade() - programa un downgrade para el final del ciclo
+
+Reglas de negocio:
+- Upgrade: pagar diferencia, ciclo se reinicia desde hoy
+- Downgrade: se programa para el final del ciclo actual (scheduled_downgrade_plan)
+- Renewal: extiende current_period_end según billing_cycle
+- Si el plan destino es freemium, el status cambia a "freemium"
+
+El cálculo del monto se muestra como referencia, pero el admin ingresa el monto final manualmente.
+```
+
+### 9.5 Prompt - Upload de Videos a Bunny.net
 
 ```
 Implementa el upload de videos a Bunny.net Stream en el editor de clases.
@@ -648,7 +801,7 @@ Componentes a modificar:
 - Reproductor: obtener URL firmada antes de mostrar el iframe
 ```
 
-### 9.5 Prompt - Stripe Connect para Profesores
+### 9.6 Prompt - Stripe Connect para Profesores
 
 ```
 Implementa Stripe Connect Express para que los profesores reciban pagos directamente.
@@ -679,7 +832,7 @@ Variables de entorno (en Supabase):
 - STRIPE_WEBHOOK_SECRET
 ```
 
-### 9.6 Prompt - Sistema de Comentarios Funcional
+### 9.7 Prompt - Sistema de Comentarios Funcional
 
 ```
 Conecta el sistema de comentarios existente a Supabase.
@@ -744,7 +897,8 @@ src/
 │   ├── useCourses.ts        # CRUD de cursos
 │   ├── useLessons.ts        # CRUD de clases
 │   ├── useEnrollments.ts    # Gestión de enrollments
-│   └── useComments.ts       # Sistema de comentarios
+│   ├── useComments.ts       # Sistema de comentarios
+│   └── useSubscriptions.ts  # Lógica de suscripciones
 ├── components/
 │   ├── ui/                  # Componentes shadcn/ui
 │   ├── ProtectedRoute.tsx   # Rutas protegidas
@@ -762,7 +916,8 @@ src/
 3. ⬜ Ejecutar schema SQL en Supabase
 4. ⬜ Implementar AuthContext y conectar login/register
 5. ⬜ Crear hooks de React Query para CRUD básico
-6. ⬜ Probar aislamiento de tenants con RLS
+6. ⬜ Implementar lógica de suscripciones
+7. ⬜ Probar aislamiento de tenants con RLS
 
 ---
 

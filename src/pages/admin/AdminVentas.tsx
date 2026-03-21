@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { profesores, planConfigs } from "@/data/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,39 +6,62 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DollarSign, CalendarIcon } from "lucide-react";
-import { toast } from "sonner";
-import { PlatformSubscription, platformSubscriptions as initialSubscriptions } from "@/data/mockData";
+import { platformSubscriptions as initialSubscriptions, PlatformSubscription } from "@/data/mockData";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
+const getTypeBadgeClass = (type: string) => {
+  switch (type) {
+    case 'first_payment': return 'bg-green-100 text-green-800 hover:bg-green-100';
+    case 'renewal': return 'bg-blue-100 text-blue-800 hover:bg-blue-100';
+    case 'upgrade': return 'bg-purple-100 text-purple-800 hover:bg-purple-100';
+    case 'downgrade': return 'bg-orange-100 text-orange-800 hover:bg-orange-100';
+    default: return '';
+  }
+};
+
+const getTypeLabel = (type: string) => {
+  switch (type) {
+    case 'first_payment': return 'Primer pago';
+    case 'renewal': return 'Renovación';
+    case 'upgrade': return 'Upgrade';
+    case 'downgrade': return 'Downgrade';
+    default: return type;
+  }
+};
+
 export default function AdminVentas() {
-  const [subs, setSubs] = useState<PlatformSubscription[]>(initialSubscriptions);
+  const [subs] = useState<PlatformSubscription[]>(initialSubscriptions);
   const [filterPlan, setFilterPlan] = useState("todos");
   const [filterCycle, setFilterCycle] = useState("todos");
+  const [filterType, setFilterType] = useState("todos");
   
   type DateFilterType = 'current_month' | 'all' | 'custom';
   const [dateFilterType, setDateFilterType] = useState<DateFilterType>('current_month');
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
-
-  const [newSaleProf, setNewSaleProf] = useState("");
-  const [newSalePlan, setNewSalePlan] = useState("");
-  const [newSaleCycle, setNewSaleCycle] = useState("mensual");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const filteredSubs = useMemo(() => {
     return subs.filter(s => {
-      const matchPlan = filterPlan === "todos" || s.planKey === filterPlan;
+      if (s.type === 'downgrade' && s.amount === 0) return false;
+
+      const matchPlan = filterPlan === "todos" || s.planTo === filterPlan;
       const matchCycle = filterCycle === "todos" || s.billingCycle === filterCycle;
+      const matchType = filterType === "todos" || s.type === filterType;
       
       let matchDate = true;
-      const saleDate = parseISO(s.date);
+      const saleDate = parseISO(s.createdAt);
       
       if (dateFilterType === 'current_month') {
         const now = new Date();
@@ -47,15 +70,19 @@ export default function AdminVentas() {
         matchDate = saleDate >= parseISO(dateStart) && saleDate <= parseISO(dateEnd);
       }
       
-      return matchPlan && matchCycle && matchDate;
+      return matchPlan && matchCycle && matchDate && matchType;
     });
-  }, [subs, filterPlan, filterCycle, dateFilterType, dateStart, dateEnd]);
+  }, [subs, filterPlan, filterCycle, filterType, dateFilterType, dateStart, dateEnd]);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterPlan, filterCycle, filterType, dateFilterType, dateStart, dateEnd]);
 
   const totalEarnings = filteredSubs.reduce((acc, curr) => acc + curr.amount, 0);
 
   const chartData = useMemo(() => {
     const dataByDate = filteredSubs.reduce((acc, sub) => {
-      acc[sub.date] = (acc[sub.date] || 0) + sub.amount;
+      acc[sub.createdAt] = (acc[sub.createdAt] || 0) + sub.amount;
       return acc;
     }, {} as Record<string, number>);
 
@@ -65,33 +92,33 @@ export default function AdminVentas() {
     }));
   }, [filteredSubs]);
 
-  const handleRegisterSale = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSaleProf || !newSalePlan) {
-      toast.error("Selecciona profesor y plan");
-      return;
-    }
+  const totalPages = Math.ceil(filteredSubs.length / itemsPerPage);
+  const paginatedSubs = filteredSubs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-    const planData = planConfigs.find(p => p.key === newSalePlan);
-    if (!planData) return;
+  const metrics = useMemo(() => {
+    const firstPayments = filteredSubs.filter(s => s.type === 'first_payment');
+    const renewals = filteredSubs.filter(s => s.type === 'renewal');
+    const upgrades = filteredSubs.filter(s => s.type === 'upgrade');
+    // Para downgrades, contar todos (incluyendo los de $0 que normalmente se excluyen)
+    const downgrades = subs.filter(s => {
+      if (s.type !== 'downgrade') return false;
+      const saleDate = parseISO(s.createdAt);
+      if (dateFilterType === 'current_month') {
+        const now = new Date();
+        return saleDate >= startOfMonth(now) && saleDate <= endOfMonth(now);
+      } else if (dateFilterType === 'custom' && dateStart && dateEnd) {
+        return saleDate >= parseISO(dateStart) && saleDate <= parseISO(dateEnd);
+      }
+      return dateFilterType === 'all';
+    });
 
-    const amount = newSaleCycle === 'mensual' ? planData.price : planData.priceAnnual;
-    
-    const newSub: PlatformSubscription = {
-      id: `sub-${Date.now()}`,
-      profesorId: newSaleProf,
-      planKey: newSalePlan,
-      billingCycle: newSaleCycle as 'mensual' | 'anual',
-      amount,
-      method: 'manual',
-      date: new Date().toISOString().split('T')[0],
+    return {
+      firstPayments: { count: firstPayments.length, total: firstPayments.reduce((a, c) => a + c.amount, 0) },
+      renewals: { count: renewals.length, total: renewals.reduce((a, c) => a + c.amount, 0) },
+      upgrades: { count: upgrades.length, total: upgrades.reduce((a, c) => a + c.amount, 0) },
+      downgrades: { count: downgrades.length }
     };
-
-    setSubs([newSub, ...subs]);
-    toast.success("Venta registrada correctamente");
-    setNewSaleProf("");
-    setNewSalePlan("");
-  };
+  }, [filteredSubs, subs, dateFilterType, dateStart, dateEnd]);
 
   const getProfName = (id: string) => profesores.find(p => p.id === id)?.name || "Desconocido";
 
@@ -105,25 +132,54 @@ export default function AdminVentas() {
   return (
     <AdminLayout>
       <div className="space-y-6 animate-fade-in pb-10">
-        <h1 className="text-2xl font-bold">Ventas de Plataforma</h1>
+        <h1 className="text-2xl font-bold">Resumen de Ventas (Suscripciones)</h1>
 
-        {/* Top Dashboard: Total Generado */}
         <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-6 flex items-center justify-between">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Ganado (Filtros Aplicados)</p>
-              <h2 className="text-4xl lg:text-5xl font-bold mt-2">${totalEarnings.toFixed(2)}</h2>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Recaudado (Filtros Aplicados)</p>
+              <h2 className="text-3xl font-bold mt-1">${totalEarnings.toFixed(2)}</h2>
             </div>
-            <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
-              <DollarSign className="h-8 w-8 text-primary" />
+            <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-primary" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Dashboard 2: Gráfica y Filtros Abajo */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground uppercase">Primeros pagos</p>
+              <p className="text-2xl font-bold">{metrics.firstPayments.count}</p>
+              <p className="text-sm text-green-600">${metrics.firstPayments.total}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground uppercase">Renovaciones</p>
+              <p className="text-2xl font-bold">{metrics.renewals.count}</p>
+              <p className="text-sm text-blue-600">${metrics.renewals.total}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground uppercase">Upgrades</p>
+              <p className="text-2xl font-bold">{metrics.upgrades.count}</p>
+              <p className="text-sm text-purple-600">${metrics.upgrades.total}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground uppercase">Downgrades</p>
+              <p className="text-2xl font-bold">{metrics.downgrades.count}</p>
+              <p className="text-sm text-orange-600">programados</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
           <CardHeader>
-            <CardTitle>Rendimiento en el tiempo</CardTitle>
+            <CardTitle>Rendimiento Histórico</CardTitle>
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="h-[300px] w-full mt-4">
@@ -162,8 +218,7 @@ export default function AdminVentas() {
               )}
             </div>
 
-            {/* Filtros */}
-            <div className="grid gap-4 sm:grid-cols-3 bg-muted/30 p-4 rounded-lg border">
+            <div className="grid gap-4 sm:grid-cols-4 bg-muted/30 p-4 rounded-lg border">
               <div className="space-y-1.5 flex flex-col">
                 <Label className="text-xs text-muted-foreground uppercase">Fecha</Label>
                 <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
@@ -200,7 +255,21 @@ export default function AdminVentas() {
               </div>
 
               <div className="space-y-1.5 flex flex-col">
-                <Label className="text-xs text-muted-foreground uppercase">Plan</Label>
+                <Label className="text-xs text-muted-foreground uppercase">Tipo</Label>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="first_payment">Primer pago</SelectItem>
+                    <SelectItem value="renewal">Renovación</SelectItem>
+                    <SelectItem value="upgrade">Upgrade</SelectItem>
+                    <SelectItem value="downgrade">Downgrade</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5 flex flex-col">
+                <Label className="text-xs text-muted-foreground uppercase">Plan Adquirido</Label>
                 <Select value={filterPlan} onValueChange={setFilterPlan}>
                   <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -211,11 +280,11 @@ export default function AdminVentas() {
               </div>
 
               <div className="space-y-1.5 flex flex-col">
-                <Label className="text-xs text-muted-foreground uppercase">Membresía</Label>
+                <Label className="text-xs text-muted-foreground uppercase">Ciclo</Label>
                 <Select value={filterCycle} onValueChange={setFilterCycle}>
                   <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todos">Todas</SelectItem>
+                    <SelectItem value="todos">Todos</SelectItem>
                     <SelectItem value="mensual">Mensual</SelectItem>
                     <SelectItem value="anual">Anual</SelectItem>
                   </SelectContent>
@@ -225,47 +294,12 @@ export default function AdminVentas() {
           </CardContent>
         </Card>
 
-        {/* Registrar nueva venta */}
+        {/* Historial Global */}
         <Card>
-          <CardHeader><CardTitle>Registrar Venta Manual</CardTitle></CardHeader>
-          <CardContent>
-            <form onSubmit={handleRegisterSale} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-              <div className="space-y-2 flex-1">
-                <Label>Profesor</Label>
-                <Select value={newSaleProf} onValueChange={setNewSaleProf}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar profesor..." /></SelectTrigger>
-                  <SelectContent>
-                    {profesores.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 flex-1">
-                <Label>Plan</Label>
-                <Select value={newSalePlan} onValueChange={setNewSalePlan}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar plan..." /></SelectTrigger>
-                  <SelectContent>
-                    {planConfigs.map(p => <SelectItem key={p.key} value={p.key}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 flex-1">
-                <Label>Modalidad</Label>
-                <Select value={newSaleCycle} onValueChange={setNewSaleCycle}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mensual">Mensual</SelectItem>
-                    <SelectItem value="anual">Anual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit" className="w-full sm:w-auto">Registrar Pago</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Historial */}
-        <Card>
-          <CardHeader><CardTitle>Historial de Ventas</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Transacciones en Plataforma</CardTitle>
+            <p className="text-sm text-muted-foreground">Nota: Para registrar, editar o crear nuevos cobros, ingresa al panel individual del profesor.</p>
+          </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
@@ -273,30 +307,51 @@ export default function AdminVentas() {
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Profesor</TableHead>
+                    <TableHead>Tipo de transacción</TableHead>
                     <TableHead>Plan</TableHead>
-                    <TableHead>Modalidad</TableHead>
+                    <TableHead>Ciclo</TableHead>
                     <TableHead>Método</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSubs.length > 0 ? filteredSubs.map(s => (
+                  {paginatedSubs.length > 0 ? paginatedSubs.map(s => (
                     <TableRow key={s.id}>
-                      <TableCell className="whitespace-nowrap">{s.date}</TableCell>
-                      <TableCell className="font-medium">{getProfName(s.profesorId)}</TableCell>
-                      <TableCell className="capitalize">{s.planKey}</TableCell>
+                      <TableCell className="whitespace-nowrap">{s.createdAt}</TableCell>
+                      <TableCell className="font-medium text-primary hover:underline cursor-pointer">
+                        <Link to={`/admin/profesores/${s.tenantId}`}>{getProfName(s.tenantId)}</Link>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getTypeBadgeClass(s.type)}>
+                          {getTypeLabel(s.type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {s.planFrom ? `${s.planFrom} → ${s.planTo}` : s.planTo}
+                      </TableCell>
                       <TableCell className="capitalize">{s.billingCycle}</TableCell>
                       <TableCell className="capitalize">{s.method}</TableCell>
                       <TableCell className="text-right font-medium text-success">${s.amount}</TableCell>
                     </TableRow>
                   )) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No hay ventas registradas con estos filtros.</TableCell>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">No hay transacciones registradas con estos filtros.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
             </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-2 pt-4 border-t mt-4">
+                <div className="text-sm text-muted-foreground">
+                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, filteredSubs.length)} de {filteredSubs.length} registros
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</Button>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Siguiente</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
