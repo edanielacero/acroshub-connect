@@ -310,5 +310,33 @@ export const platformSubscriptions: PlatformSubscription[] = [
 // Current logged-in user simulation
 export type CurrentUserRole = 'admin' | 'profesor' | 'alumno' | null;
 
+export interface StudentPayment {
+  id: string;
+  tenantId: string;
+  userId: string;
+  productId: string;
+  amount: number;
+  method: 'stripe' | 'paypal' | 'transfer' | 'cash' | 'crypto' | 'other';
+  notes: string | null;
+  createdAt: string;
+}
+
+export const studentPayments: StudentPayment[] = [
+  { id: "sp1", tenantId: "prof-1", userId: "alu-1", productId: "course-1", amount: 97, method: "stripe", notes: null, createdAt: "2024-01-15T10:00:00Z" },
+  { id: "sp2", tenantId: "prof-1", userId: "alu-1", productId: "course-2", amount: 50, method: "paypal", notes: "Pago parcial, resta $47", createdAt: "2024-02-20T10:00:00Z" },
+  { id: "sp3", tenantId: "prof-1", userId: "alu-1", productId: "course-2", amount: 47, method: "transfer", notes: "Pago restante", createdAt: "2024-02-25T10:00:00Z" },
+];
+
+export interface StudentProgress {
+  userId: string;
+  lessonId: string;
+  completedAt: string;
+}
+
+export const lessonProgress: StudentProgress[] = [
+  { userId: "alu-1", lessonId: "lesson-1", completedAt: "2024-01-16T10:00:00Z" },
+  { userId: "alu-1", lessonId: "lesson-2", completedAt: "2024-01-17T11:30:00Z" },
+];
+
 export const getCurrentProfesor = () => profesores[0]; // Carlos Mendoza
 export const getCurrentAlumno = () => alumnos[0]; // Ana López

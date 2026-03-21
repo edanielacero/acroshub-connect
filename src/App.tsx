@@ -20,6 +20,7 @@ import ProfesorHubs from "./pages/profesor/ProfesorHubs";
 import HubEditor from "./pages/profesor/HubEditor";
 import CourseEditor from "./pages/profesor/CourseEditor";
 import ProfesorAlumnos from "./pages/profesor/ProfesorAlumnos";
+import ProfesorAlumnoDetail from "./pages/profesor/ProfesorAlumnoDetail";
 import ProfesorVentas from "./pages/profesor/ProfesorVentas";
 import ProfesorConfiguracion from "./pages/profesor/ProfesorConfiguracion";
 
@@ -58,6 +59,7 @@ const App = () => (
           <Route path="/dashboard/hubs/:id" element={<HubEditor />} />
           <Route path="/dashboard/cursos/:id" element={<CourseEditor />} />
           <Route path="/dashboard/alumnos" element={<ProfesorAlumnos />} />
+          <Route path="/dashboard/alumnos/:id" element={<ProfesorAlumnoDetail />} />
           <Route path="/dashboard/ventas" element={<ProfesorVentas />} />
           <Route path="/dashboard/configuracion" element={<ProfesorConfiguracion />} />
 

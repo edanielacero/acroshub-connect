@@ -11,6 +11,7 @@ import { Search, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDateProject } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 export default function ProfesorAlumnos() {
   const [search, setSearch] = useState("");
@@ -86,7 +87,9 @@ export default function ProfesorAlumnos() {
                   <TableCell><Badge variant="default">Activo</Badge></TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row">
-                      <Button variant="ghost" size="sm">Ver</Button>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/dashboard/alumnos/${a.id}`}>Ver</Link>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
