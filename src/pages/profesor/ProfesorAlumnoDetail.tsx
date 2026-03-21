@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { alumnos, courses, studentPayments, getCurrentProfesor, lessonProgress, StudentPayment } from "@/data/mockData";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,9 @@ export default function ProfesorAlumnoDetail() {
       course: courses.find(c => c.id === cId),
       origin: idx === 0 ? 'stripe' : 'manual',
       type: 'Curso',
+      subscriptionType: idx === 0 ? 'Mensual' : 'Único Pago',
       accessDate: baseAlumno.createdAt,
-      expirationDate: addDays(new Date(baseAlumno.createdAt), idx === 0 ? 30 : 365).toISOString(),
+      expirationDate: idx === 0 ? addDays(new Date(baseAlumno.createdAt), 30).toISOString() : null,
     })) || []
   );
 
@@ -50,9 +51,20 @@ export default function ProfesorAlumnoDetail() {
 
   // New Payment Form State
   const [payProduct, setPayProduct] = useState("");
-  const [payAmount, setPayAmount] = useState("");
-  const [payMethod, setPayMethod] = useState("");
+  const [payAmount, setPayAmount] = useState("0");
+  const [paySubscription, setPaySubscription] = useState("");
   const [payNotes, setPayNotes] = useState("");
+
+  useEffect(() => {
+    if (payProduct) {
+      const course = courses.find(c => c.id === payProduct);
+      if (course) {
+        setPayAmount(course.price.toString());
+      }
+    } else {
+      setPayAmount("0");
+    }
+  }, [payProduct]);
 
   if (!baseAlumno) {
     return (
@@ -66,8 +78,8 @@ export default function ProfesorAlumnoDetail() {
 
   const handleRegisterPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!payProduct || !payAmount || !payMethod) {
-      toast.error("Completa pago, monto y método obligatoriamente.");
+    if (!payProduct || !payAmount || !paySubscription) {
+      toast.error("Completa producto, monto y tipo de suscripción obligatoriamente.");
       return;
     }
     const newPayment: StudentPayment = {
@@ -76,8 +88,7 @@ export default function ProfesorAlumnoDetail() {
       userId: baseAlumno.id,
       productId: payProduct,
       amount: parseFloat(payAmount),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      method: payMethod as any,
+      method: 'manual' as any,
       notes: payNotes,
       createdAt: new Date().toISOString()
     };
@@ -87,18 +98,19 @@ export default function ProfesorAlumnoDetail() {
       setActiveProducts(prev => [...prev, {
         courseId: payProduct,
         course: courses.find(c => c.id === payProduct),
-        origin: payMethod === 'stripe' ? 'stripe' : 'manual',
+        origin: 'manual',
         type: 'Curso',
+        subscriptionType: paySubscription === 'unico' ? 'Único Pago' : (paySubscription === 'mensual' ? 'Mensual' : 'Anual'),
         accessDate: new Date().toISOString(),
-        expirationDate: addDays(new Date(), 365).toISOString(),
+        expirationDate: paySubscription === 'unico' ? null : addDays(new Date(), paySubscription === 'mensual' ? 30 : 365).toISOString(),
       }]);
     }
     
     setPayments(prev => [newPayment, ...prev]);
     toast.success("Pago registrado correctamente");
     setPayProduct("");
-    setPayAmount("");
-    setPayMethod("");
+    setPayAmount("0");
+    setPaySubscription("");
     setPayNotes("");
   };
 
@@ -130,10 +142,22 @@ export default function ProfesorAlumnoDetail() {
     }
   };
 
+  const expiringSub = activeProducts.find(p => p.expirationDate && differenceInDays(new Date(p.expirationDate), new Date()) <= 7 && differenceInDays(new Date(p.expirationDate), new Date()) >= 0);
+
   return (
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in pb-10">
         
+        {expiringSub && (
+          <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-800 p-4 rounded-md flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+            <div>
+              <p className="font-semibold">Atención: Suscripción por vencer</p>
+              <p className="text-sm">El acceso del alumno a <span className="font-semibold">{expiringSub.course?.title}</span> vence en {differenceInDays(new Date(expiringSub.expirationDate!), new Date())} días.</p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/alumnos')}>
@@ -180,6 +204,7 @@ export default function ProfesorAlumnoDetail() {
                     <TableRow>
                       <TableHead>Producto</TableHead>
                       <TableHead>Tipo</TableHead>
+                      <TableHead>Suscripción</TableHead>
                       <TableHead>Origen</TableHead>
                       <TableHead>Fecha acceso</TableHead>
                       <TableHead>Expiración</TableHead>
@@ -192,9 +217,10 @@ export default function ProfesorAlumnoDetail() {
                       <TableRow key={idx}>
                         <TableCell className="font-medium">{p.course?.title}</TableCell>
                         <TableCell><Badge variant="outline" className="text-muted-foreground">{p.type}</Badge></TableCell>
+                        <TableCell className="capitalize font-medium">{p.subscriptionType || 'Único Pago'}</TableCell>
                         <TableCell>{originBadge(p.origin)}</TableCell>
                         <TableCell>{formatDateProject(p.accessDate)}</TableCell>
-                        <TableCell>{p.expirationDate ? formatDateProject(p.expirationDate) : 'De por vida'}</TableCell>
+                        <TableCell>{p.expirationDate ? formatDateProject(p.expirationDate) : 'Ilimitado'}</TableCell>
                         <TableCell>{statusBadge(p.expirationDate)}</TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -242,16 +268,13 @@ export default function ProfesorAlumnoDetail() {
                 </div>
               </div>
               <div className="space-y-2 lg:col-span-1">
-                <Label>Método</Label>
-                <Select value={payMethod} onValueChange={setPayMethod}>
+                <Label>Suscripción</Label>
+                <Select value={paySubscription} onValueChange={setPaySubscription}>
                   <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="stripe">Stripe (Tarjeta)</SelectItem>
-                    <SelectItem value="paypal">PayPal</SelectItem>
-                    <SelectItem value="transfer">Transferencia</SelectItem>
-                    <SelectItem value="cash">Efectivo</SelectItem>
-                    <SelectItem value="crypto">Cripto</SelectItem>
-                    <SelectItem value="other">Otro</SelectItem>
+                    <SelectItem value="mensual">Mensual</SelectItem>
+                    <SelectItem value="anual">Anual</SelectItem>
+                    <SelectItem value="unico">Único pago</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -387,7 +410,7 @@ export default function ProfesorAlumnoDetail() {
             <div className="space-y-4 py-2">
               <div className="p-3 bg-muted rounded-lg text-sm">
                 <p><span className="font-semibold">Producto:</span> {selectedProduct.course?.title}</p>
-                <p className="mt-1"><span className="font-semibold">Expiración actual:</span> {selectedProduct.expirationDate ? formatDateProject(selectedProduct.expirationDate) : 'De por vida'}</p>
+                <p className="mt-1"><span className="font-semibold">Expiración actual:</span> {selectedProduct.expirationDate ? formatDateProject(selectedProduct.expirationDate) : 'Ilimitado'}</p>
               </div>
               <div className="space-y-2">
                 <Label>Nueva fecha de expiración</Label>
