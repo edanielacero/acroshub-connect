@@ -2,7 +2,7 @@
 ### *Tu plataforma de cursos, sin comisiones*
 
 **Documento Maestro del Proyecto**
-Versión 3.0 | Marzo 2026 | Autor: Daniel – Founder
+Versión 3.1 | Marzo 2026 | Autor: Daniel – Founder
 
 ---
 
@@ -77,6 +77,8 @@ Acroshub es una plataforma SaaS multi-tenant para educadores digitales donde el 
 - Cada profesor es un tenant completamente aislado (no ve datos de otros profesores)
 - Puede tener múltiples HUBs (ej: "Trading", "Finanzas personales")
 - Gestiona sus propios alumnos: registrarlos, asignar accesos, revocarlos
+- Registra pagos de alumnos (manuales o por Stripe) desde el perfil de cada alumno
+- Ve el historial de pagos y total pagado por cada alumno
 - Conecta su propia cuenta de Stripe Connect Express para recibir pagos directamente
 - También acepta pagos externos (PayPal, cripto, transferencia, efectivo) y da accesos manuales
 - Configura precios, cupones, descuentos y períodos de acceso
@@ -213,8 +215,9 @@ Profesor
 /dashboard/hubs       → Lista de HUBs
 /dashboard/hubs/:id   → Editor de HUB
 /dashboard/cursos/:id → Editor de curso
-/dashboard/alumnos    → Gestión de alumnos
-/dashboard/ventas     → Reportes de ventas del profesor
+/dashboard/alumnos    → Lista de alumnos
+/dashboard/alumnos/:id → Detalle del alumno (info, accesos, pagos, progreso)
+/dashboard/ventas     → Reportes de ventas del profesor (solo lectura)
 /dashboard/config     → Configuración del profesor
 
 /mi-cuenta            → Dashboard del alumno (todos sus HUBs)
@@ -393,6 +396,21 @@ Profesor
 | notes | TEXT | Notas opcionales del admin |
 | created_at | TIMESTAMP | Fecha del registro de la venta |
 
+#### Tabla: student_payments (Historial de pagos de alumnos a profesores)
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| id | UUID (PK) | Identificador único |
+| tenant_id | UUID (FK) | Referencia a tenants (Profesor que recibe) |
+| user_id | UUID (FK) | Referencia a users (Alumno que paga) |
+| product_id | UUID (FK) | Referencia a products (Producto comprado) |
+| amount | DECIMAL | Monto pagado por el alumno |
+| method | ENUM | stripe / paypal / transfer / cash / crypto / other |
+| notes | TEXT | Notas opcionales del profesor |
+| created_at | TIMESTAMP | Fecha del pago |
+
+*Nota: Esta tabla registra TODOS los pagos, incluyendo los manuales. Los pagos por Stripe también generan un enrollment automático vía webhook.*
+
 ### 3.5 Row Level Security (RLS) — CRÍTICO
 
 Todas las tablas con tenant_id deben tener RLS activado:
@@ -550,8 +568,15 @@ Profesor → paga suscripción → Daniel (manual inicialmente)
 6. Conecta su cuenta de Stripe (Stripe Connect Express).
 7. Comparte el link de su HUB con sus seguidores.
 8. Los alumnos compran y el dinero le llega directo.
-9. Gestiona alumnos y accesos desde su panel.
-10. Ve reportes de ventas y cantidad de alumnos.
+9. Gestiona alumnos desde su panel:
+   - Ve lista de alumnos con búsqueda
+   - Entra al perfil de un alumno para ver detalle
+   - Registra pagos manuales (PayPal, transferencia, efectivo, cripto)
+   - Asigna accesos a productos (con o sin pago)
+   - Revoca o extiende accesos
+   - Ve historial de pagos y total pagado por alumno
+   - Ve progreso del alumno en cursos
+10. Ve reportes de ventas globales (solo lectura) y cantidad de alumnos.
 
 ### 5.3 Flujo del Super Admin (Daniel)
 
@@ -719,7 +744,8 @@ ENUMs necesarios:
 - enrollment_origin: stripe, manual, gift
 - video_source: bunny, youtube, vimeo, drive
 - subscription_type: first_payment, renewal, upgrade, downgrade
-- payment_method: manual, stripe
+- platform_payment_method: manual, stripe
+- student_payment_method: stripe, paypal, transfer, cash, crypto, other
 
 Incluir:
 - Foreign keys con ON DELETE CASCADE donde corresponda
@@ -856,6 +882,72 @@ RLS:
 - Todos pueden leer comentarios de lecciones donde tienen acceso
 ```
 
+### 9.8 Prompt - Gestión de Alumnos y Pagos
+
+```
+Implementa la gestión de alumnos para el panel del profesor.
+
+Archivos:
+- src/hooks/useStudents.ts
+- src/hooks/useStudentPayments.ts
+
+HOOKS NECESARIOS:
+
+useStudents():
+1. useStudents() - lista todos los alumnos del tenant (desde enrollments)
+2. useStudent(userId) - obtiene un alumno con sus enrollments y pagos
+3. useStudentStats(userId) - métricas: total pagado, cursos activos, progreso
+
+useStudentPayments():
+1. useStudentPayments(userId) - historial de pagos del alumno
+2. useRegisterStudentPayment() - mutation para registrar pago manual
+3. useTotalPaidByStudent(userId) - suma total de pagos
+
+useEnrollments():
+1. useStudentEnrollments(userId) - enrollments del alumno
+2. useAddEnrollment() - agregar acceso (con o sin pago)
+3. useRevokeEnrollment() - revocar acceso a un producto
+4. useExtendEnrollment() - extender fecha de expiración
+
+LÓGICA DE NEGOCIO:
+
+Registrar pago manual:
+1. Profesor selecciona producto y monto
+2. Se crea registro en student_payments
+3. Se crea enrollment automáticamente si no existe
+4. Si el enrollment ya existe, se puede extender
+
+Métodos de pago soportados:
+- stripe (viene de webhook automático)
+- paypal
+- transfer (transferencia bancaria)
+- cash (efectivo)
+- crypto (criptomonedas)
+- other (otro)
+
+DATOS A MOSTRAR EN DETALLE DEL ALUMNO:
+
+Información básica:
+- Nombre, email, fecha de primer acceso al HUB
+- Total pagado (suma de student_payments)
+- Cantidad de productos activos
+
+Productos con acceso (tabla):
+- Producto, tipo, origen, fecha acceso, expiración, estado
+- Acciones: Revocar, Extender
+
+Historial de pagos (tabla):
+- Fecha, producto, monto, método, notas
+
+Progreso por curso (colapsable):
+- % completado, última clase vista, última actividad
+- Quizzes: intentos y mejor nota
+
+RLS:
+- Profesor solo ve alumnos que tienen enrollments en su tenant
+- Profesor solo puede crear/editar student_payments de su tenant
+```
+
 ---
 
 ## 10. Consideraciones Finales
@@ -898,7 +990,9 @@ src/
 │   ├── useLessons.ts        # CRUD de clases
 │   ├── useEnrollments.ts    # Gestión de enrollments
 │   ├── useComments.ts       # Sistema de comentarios
-│   └── useSubscriptions.ts  # Lógica de suscripciones
+│   ├── useSubscriptions.ts  # Lógica de suscripciones (admin)
+│   ├── useStudents.ts       # Gestión de alumnos (profesor)
+│   └── useStudentPayments.ts # Pagos de alumnos (profesor)
 ├── components/
 │   ├── ui/                  # Componentes shadcn/ui
 │   ├── ProtectedRoute.tsx   # Rutas protegidas
@@ -906,6 +1000,9 @@ src/
 └── pages/
     ├── admin/               # Panel admin
     ├── dashboard/           # Panel profesor
+    │   └── alumnos/
+    │       ├── index.tsx    # Lista de alumnos
+    │       └── [id].tsx     # Detalle del alumno
     └── [slug]/              # HUB público
 ```
 
