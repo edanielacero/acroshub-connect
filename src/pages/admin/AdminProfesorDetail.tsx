@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { formatDateProject } from "@/lib/utils";
 
 const planPrices = {
   freemium: { mensual: 0, anual: 0 },
@@ -174,7 +175,7 @@ export default function AdminProfesorDetail() {
         <Card>
           <CardContent className="grid gap-6 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-6 items-end">
             <div><p className="text-sm text-muted-foreground mb-1">Email</p><p className="font-medium break-all">{prof.email}</p></div>
-            <div><p className="text-sm text-muted-foreground mb-1">Fecha de registro</p><p className="font-medium">{prof.createdAt}</p></div>
+            <div><p className="text-sm text-muted-foreground mb-1">Fecha de registro</p><p className="font-medium">{formatDateProject(prof.createdAt)}</p></div>
             <div><p className="text-sm text-muted-foreground mb-1">Stripe Payouts</p><p className="font-medium">{prof.stripeConnected ? '✅ Conectado' : '❌ No conectado'}</p></div>
             
             <div className="space-y-2">
@@ -273,11 +274,11 @@ export default function AdminProfesorDetail() {
               </div>
               <div>
                 <Label className="text-xs uppercase text-muted-foreground">Ciclo Iniciado</Label>
-                <p className="font-medium mt-1">{prof.currentPeriodStart || 'N/A'}</p>
+                <p className="font-medium mt-1">{prof.currentPeriodStart ? formatDateProject(prof.currentPeriodStart) : 'N/A'}</p>
               </div>
               <div>
                 <Label className="text-xs uppercase text-muted-foreground">Renovación / Expiración</Label>
-                <p className="font-medium mt-1">{prof.currentPeriodEnd || 'N/A'}</p>
+                <p className="font-medium mt-1">{prof.currentPeriodEnd ? formatDateProject(prof.currentPeriodEnd) : 'N/A'}</p>
               </div>
             </div>
             
@@ -285,7 +286,7 @@ export default function AdminProfesorDetail() {
               <div className="mt-4 flex items-center justify-between p-3 border border-orange-200 bg-orange-50/50 rounded-lg text-orange-800">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <AlertTriangle className="h-4 w-4" />
-                  ⚠️ Existe un downgrade programado a plan "{prof.scheduledDowngradePlan}" para el {prof.currentPeriodEnd}
+                  ⚠️ Existe un downgrade programado a plan "{prof.scheduledDowngradePlan}" para el {formatDateProject(prof.currentPeriodEnd)}
                 </div>
                 <Button 
                   variant="outline"
@@ -321,7 +322,7 @@ export default function AdminProfesorDetail() {
                   <TableBody>
                     {paginatedSubs.map(s => (
                       <TableRow key={s.id}>
-                        <TableCell className="whitespace-nowrap">{s.createdAt}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDateProject(s.createdAt)}</TableCell>
                         <TableCell>
                           <Badge className={getSubBadgeColor(s.type)} variant="secondary">{s.type.replace('_', ' ')}</Badge>
                           {s.method === 'stripe' && <span className="ml-2 text-xs text-muted-foreground">(Stripe)</span>}

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
+import { formatDateProject } from "@/lib/utils";
 
 export default function AdminProfesores() {
   const [search, setSearch] = useState("");
@@ -75,7 +76,7 @@ export default function AdminProfesores() {
                       {p.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground whitespace-nowrap">{p.createdAt}</TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">{formatDateProject(p.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row">
                       <Button variant="ghost" size="sm" asChild>

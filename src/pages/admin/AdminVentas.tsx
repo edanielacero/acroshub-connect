@@ -14,6 +14,7 @@ import { DollarSign, CalendarIcon } from "lucide-react";
 import { platformSubscriptions as initialSubscriptions, PlatformSubscription } from "@/data/mockData";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatDateProject } from "@/lib/utils";
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -317,7 +318,7 @@ export default function AdminVentas() {
                 <TableBody>
                   {paginatedSubs.length > 0 ? paginatedSubs.map(s => (
                     <TableRow key={s.id}>
-                      <TableCell className="whitespace-nowrap">{s.createdAt}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatDateProject(s.createdAt)}</TableCell>
                       <TableCell className="font-medium text-primary hover:underline cursor-pointer">
                         <Link to={`/admin/profesores/${s.tenantId}`}>{getProfName(s.tenantId)}</Link>
                       </TableCell>
