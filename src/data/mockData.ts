@@ -108,15 +108,17 @@ export interface PlanConfig {
   maxCourses: number;
   maxLessonsPerCourse: number;
   maxEbooks: number;
+  price: number;
+  priceAnnual: number;
 }
 
 // ===== MOCK DATA =====
 
 export const planConfigs: PlanConfig[] = [
-  { name: 'Freemium', key: 'freemium', maxHubs: 1, maxStudents: 50, maxCourses: 3, maxLessonsPerCourse: 10, maxEbooks: 1 },
-  { name: 'Básico', key: 'basico', maxHubs: 2, maxStudents: 200, maxCourses: 10, maxLessonsPerCourse: 30, maxEbooks: 5 },
-  { name: 'Pro', key: 'pro', maxHubs: 5, maxStudents: 1000, maxCourses: 50, maxLessonsPerCourse: 100, maxEbooks: 20 },
-  { name: 'Enterprise', key: 'enterprise', maxHubs: -1, maxStudents: -1, maxCourses: -1, maxLessonsPerCourse: -1, maxEbooks: -1 },
+  { name: 'Freemium', key: 'freemium', maxHubs: 1, maxStudents: 50, maxCourses: 3, maxLessonsPerCourse: 10, maxEbooks: 1, price: 0, priceAnnual: 0 },
+  { name: 'Básico', key: 'basico', maxHubs: 2, maxStudents: 200, maxCourses: 10, maxLessonsPerCourse: 30, maxEbooks: 5, price: 29, priceAnnual: 290 },
+  { name: 'Pro', key: 'pro', maxHubs: 5, maxStudents: 1000, maxCourses: 50, maxLessonsPerCourse: 100, maxEbooks: 20, price: 99, priceAnnual: 990 },
+  { name: 'Enterprise', key: 'enterprise', maxHubs: -1, maxStudents: -1, maxCourses: -1, maxLessonsPerCourse: -1, maxEbooks: -1, price: 299, priceAnnual: 2990 },
 ];
 
 export const profesores: Profesor[] = [

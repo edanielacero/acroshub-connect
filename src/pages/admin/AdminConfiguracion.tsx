@@ -15,6 +15,8 @@ export default function AdminConfiguracion() {
   };
 
   const fields = [
+    { key: 'price', label: 'Precio mensual (USD)' },
+    { key: 'priceAnnual', label: 'Precio anual (USD)' },
     { key: 'maxHubs', label: 'Máximo de HUBs' },
     { key: 'maxStudents', label: 'Máximo de alumnos' },
     { key: 'maxCourses', label: 'Máximo de cursos' },
