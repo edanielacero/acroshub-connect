@@ -2,7 +2,7 @@
 ### *Tu plataforma de cursos, sin comisiones*
 
 **Documento Maestro del Proyecto**
-Versión 3.1 | Marzo 2026 | Autor: Daniel – Founder
+Versión 3.2 | Marzo 2026 | Autor: Daniel – Founder
 
 ---
 
@@ -279,10 +279,15 @@ Profesor
 | hub_id | UUID (FK) | Referencia a hubs |
 | type | ENUM | course / ebook / bundle / hub_access |
 | name | TEXT | Nombre del producto |
-| price_one_time | DECIMAL | Precio de pago único |
-| price_subscription | DECIMAL | Precio de suscripción mensual |
-| stripe_price_id | TEXT | ID del precio en Stripe |
+| price_one_time | DECIMAL | Precio de pago único (null si no disponible) |
+| price_monthly | DECIMAL | Precio de suscripción mensual (null si no disponible) |
+| price_yearly | DECIMAL | Precio de suscripción anual (null si no disponible) |
+| stripe_price_id_one_time | TEXT | ID del precio único en Stripe |
+| stripe_price_id_monthly | TEXT | ID del precio mensual en Stripe |
+| stripe_price_id_yearly | TEXT | ID del precio anual en Stripe |
 | created_at | TIMESTAMP | Fecha de creación |
+
+*Nota: El profesor puede activar 1, 2 o las 3 opciones de precio para cada producto. Si un campo de precio es null, esa opción no está disponible para ese producto.*
 
 #### Tabla: courses
 
@@ -341,9 +346,14 @@ Profesor
 | product_id | UUID (FK) | Referencia a products |
 | tenant_id | UUID (FK) | Referencia a tenants |
 | origin | ENUM | stripe / manual / gift |
+| payment_type | ENUM | one_time / monthly / yearly |
 | is_active | BOOLEAN | Si el acceso está activo |
-| expires_at | TIMESTAMP | Fecha de expiración |
-| stripe_subscription_id | TEXT | ID de suscripción en Stripe |
+| expires_at | TIMESTAMP | Fecha de expiración (null si es pago único) |
+| grace_period_end | TIMESTAMP | Fin del período de gracia (null si no aplica) |
+| stripe_subscription_id | TEXT | ID de suscripción en Stripe (null si es manual o pago único) |
+| created_at | TIMESTAMP | Fecha de creación |
+
+*Nota: Para pago único, expires_at es null (acceso permanente). Para suscripciones, expires_at se actualiza con cada renovación.*
 
 #### Tabla: lesson_progress
 
@@ -533,7 +543,74 @@ Nuevo ciclo: hoy → +1 año
 2. Daniel registra el pago con tipo `renewal`
 3. El campo `current_period_end` se extiende según el ciclo (mensual: +1 mes, anual: +1 año)
 
-### 4.4 Flujo de Dinero
+### 4.4 Suscripciones de Alumnos
+
+Los productos del profesor pueden tener hasta 3 opciones de precio simultáneas. El alumno elige cuál le conviene.
+
+#### Tipos de pago disponibles por producto
+
+| Tipo | Comportamiento | Expiración |
+|---|---|---|
+| **Pago único** | Acceso permanente | Nunca expira |
+| **Suscripción mensual** | Acceso mientras pague | +1 mes desde el pago |
+| **Suscripción anual** | Acceso mientras pague | +1 año desde el pago |
+
+*El profesor puede activar 1, 2 o las 3 opciones para cada producto.*
+
+#### Flujo de suscripciones por Stripe
+
+1. Alumno elige producto y tipo de suscripción
+2. Completa checkout en Stripe → dinero va directo al profesor
+3. Webhook crea enrollment con `expires_at` según tipo
+4. Stripe cobra automáticamente cada mes/año
+5. Webhook de `invoice.paid` extiende `expires_at`
+6. Si falla el pago:
+   - Stripe reintenta el cobro (comportamiento por defecto)
+   - Se activa período de gracia de 3 días
+   - Se envía email al alumno avisando del problema
+7. Si no se recupera el pago en 3 días:
+   - Webhook de `customer.subscription.deleted` revoca el enrollment
+   - `is_active` = false
+
+#### Flujo de suscripciones manuales (PayPal, transferencia, efectivo, cripto)
+
+1. Alumno paga fuera de la plataforma
+2. Profesor registra el pago desde el perfil del alumno
+3. Sistema crea enrollment con `expires_at`:
+   - Mensual: +1 mes desde hoy
+   - Anual: +1 año desde hoy
+   - Pago único: null (sin expiración)
+4. Cuando se acerca la expiración:
+   - 7 días antes: email automático al alumno recordando renovar
+   - 7 días antes: banner visible para el profesor en el perfil del alumno
+5. Si el alumno renueva, profesor registra nuevo pago y se extiende `expires_at`
+6. Si no renueva, al llegar `expires_at`:
+   - `is_active` = false
+   - Alumno pierde acceso
+
+#### Período de gracia
+
+| Situación | Duración | Acción |
+|---|---|---|
+| Fallo de pago en Stripe | 3 días | Stripe reintenta, si no se recupera → revocación |
+| Expiración de pago manual | 0 días | Revocación inmediata al llegar `expires_at` |
+
+#### Notificaciones al alumno
+
+| Momento | Notificación |
+|---|---|
+| 7 días antes de expirar | Email: "Tu acceso a [curso] expira el [fecha]. Renueva para no perder acceso." |
+| Día de expiración | Email: "Tu acceso a [curso] ha expirado." |
+| Fallo de pago Stripe | Email: "Hubo un problema con tu pago. Actualiza tu método de pago." |
+
+#### Avisos al profesor
+
+| Momento | Aviso |
+|---|---|
+| 7 días antes de expirar (manual) | Banner en perfil del alumno: "⚠️ Acceso a [curso] expira el [fecha]" |
+| Alumno con pago fallido (Stripe) | Banner: "⚠️ Pago fallido - período de gracia activo" |
+
+### 4.5 Flujo de Dinero
 
 ```
 Alumno → paga → Profesor (Stripe Connect / métodos propios)
@@ -742,6 +819,7 @@ ENUMs necesarios:
 - billing_cycle: mensual, anual
 - product_type: course, ebook, bundle, hub_access
 - enrollment_origin: stripe, manual, gift
+- enrollment_payment_type: one_time, monthly, yearly
 - video_source: bunny, youtube, vimeo, drive
 - subscription_type: first_payment, renewal, upgrade, downgrade
 - platform_payment_method: manual, stripe
