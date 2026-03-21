@@ -37,11 +37,11 @@ export default function AdminConfiguracion() {
                     <Label className="text-xs">{f.label}</Label>
                     <Input
                       type="number"
-                      value={(plan as any)[f.key]}
+                      value={plan[f.key as keyof typeof plan]}
                       onChange={e => updatePlan(idx, f.key, Number(e.target.value))}
                       min={-1}
                     />
-                    {(plan as any)[f.key] === -1 && <p className="text-xs text-muted-foreground">Ilimitado</p>}
+                    {plan[f.key as keyof typeof plan] === -1 && <p className="text-xs text-muted-foreground">Ilimitado</p>}
                   </div>
                 ))}
               </CardContent>
