@@ -1,41 +1,75 @@
 import { useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
-import { hubs, ebooks, getCurrentAlumno, profesores } from "@/data/mockData";
+import { useParams, useOutletContext } from "react-router-dom";
 import { usePreview } from "@/components/layout/PreviewProvider";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Lock, CheckCircle, BookOpen, Download } from "lucide-react";
+import { Lock, CheckCircle, BookOpen, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getCurrentAlumno } from "@/data/mockData";
 
 export default function EbookDetalle() {
-  const { slug, id } = useParams();
-  const hub = hubs.find(h => h.slug === slug);
-  const ebook = ebooks.find(e => e.id === id && e.hubId === hub?.id);
-  const prof = profesores.find(p => p.id === hub?.profesorId);
-  
+  const { hub } = useOutletContext<{ hub: any }>();
+  const { id } = useParams();
   const { demoMode, isOwner } = usePreview();
   const alumno = getCurrentAlumno();
-  
-  const defaultOption = ebook?.pricingOptions && ebook.pricingOptions.length > 0 
-    ? ebook.pricingOptions[0].id 
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['ebookDetalle', id],
+    queryFn: async () => {
+      if (!id || !hub?.id) return null;
+
+      const { data: eData, error: eErr } = await supabase
+        .from('ebooks')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (eErr) throw eErr;
+
+      const { data: pData } = await supabase
+        .from('pricing_options')
+        .select('*')
+        .eq('product_id', id);
+
+      const { data: profData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', hub.profesor_id)
+        .single();
+
+      return {
+        ebook: eData,
+        pricingOptions: pData || [],
+        prof: profData,
+      };
+    },
+    enabled: !!id && !!hub?.id,
+  });
+
+  const defaultOption = data?.pricingOptions && data.pricingOptions.length > 0
+    ? data.pricingOptions[0].id
     : 'one_time';
-    
+
   const [opcionSeleccionada, setOpcionSeleccionada] = useState(defaultOption);
 
-  if (!hub || !ebook) return <div className="p-8 text-center border mt-8 rounded-xl max-w-lg mx-auto bg-card">El E-Book no fue encontrado</div>;
+  if (isLoading) return <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (!hub || !data?.ebook) return <div className="p-8 text-center border mt-8 rounded-xl max-w-lg mx-auto bg-card">El E-Book no fue encontrado</div>;
+
+  const { ebook, pricingOptions, prof } = data;
 
   const purchasedEbookIds = alumno.purchasedEbooks || [];
   const hasAccess = isOwner ? (demoMode === 'con-acceso') : purchasedEbookIds.includes(ebook.id);
 
-  const isManualPayment = !prof?.stripeConnected && !!prof?.manualPaymentLink;
-  const isUnavailable = !prof?.stripeConnected && !prof?.manualPaymentLink;
+  const isManualPayment = !prof?.stripe_connected && !!prof?.manual_payment_link;
+  const isUnavailable = !prof?.stripe_connected && !prof?.manual_payment_link;
 
   const handleComprar = () => {
-    if (isManualPayment && prof?.manualPaymentLink) {
-      window.open(prof.manualPaymentLink, '_blank');
+    if (isManualPayment && prof?.manual_payment_link) {
+      window.open(prof.manual_payment_link, '_blank');
     } else {
       toast.success("Redirigiendo a pasarela de pago (Stripe)...");
     }
@@ -50,7 +84,7 @@ export default function EbookDetalle() {
             <BookOpen className="h-10 w-10 text-green-600" />
           </div>
           <div className="flex-1 text-center md:text-left">
-            <Badge variant="outline" className="mb-2 text-green-600 border-green-600/20">{ebook.format.toUpperCase()} E-Book</Badge>
+            <Badge variant="outline" className="mb-2 text-green-600 border-green-600/20">{(ebook.format || 'PDF').toUpperCase()} E-Book</Badge>
             <h1 className="text-3xl font-extrabold">{ebook.title}</h1>
             <p className="text-muted-foreground mt-2">{ebook.description}</p>
           </div>
@@ -79,7 +113,7 @@ export default function EbookDetalle() {
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Badge className="mb-4 px-3 py-1 font-medium bg-green-100 text-green-700 hover:bg-green-100 cursor-default border-green-200">
-            E-Book {ebook.format.toUpperCase()} · {ebook.pages} páginas
+            E-Book {(ebook.format || 'PDF').toUpperCase()} · {ebook.pages || '?'} páginas
           </Badge>
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">{ebook.title}</h1>
           <p className="text-xl text-muted-foreground mt-5 leading-relaxed">{ebook.description}</p>
@@ -103,8 +137,8 @@ export default function EbookDetalle() {
               
               {/* Opciones de precio */}
               <RadioGroup value={opcionSeleccionada} onValueChange={setOpcionSeleccionada} className="space-y-3">
-                {ebook.pricingOptions && ebook.pricingOptions.length > 0 ? (
-                  ebook.pricingOptions.map(option => (
+                {pricingOptions && pricingOptions.length > 0 ? (
+                  pricingOptions.map((option: any) => (
                     <div key={option.id} className={`flex items-start space-x-3 border rounded-xl p-4 cursor-pointer transition-all ${opcionSeleccionada === option.id ? 'border-green-600 bg-green-50 ring-1 ring-green-600' : 'hover:bg-muted/50 border-muted-foreground/20'}`} onClick={() => setOpcionSeleccionada(option.id)}>
                       <RadioGroupItem value={option.id} id={option.id} className="mt-1" />
                       <Label htmlFor={option.id} className="flex-1 cursor-pointer">
@@ -112,17 +146,17 @@ export default function EbookDetalle() {
                           {option.type === 'one_time' ? 'Pago único' : option.type === 'monthly' ? 'Suscripción Mensual' : 'Suscripción Anual'}
                         </div>
                         <div className="text-3xl font-extrabold mt-1 text-green-600">
-                          ${option.price} <span className="text-sm font-normal text-muted-foreground">{ebook.currency}{option.type !== 'one_time' ? (option.type === 'monthly' ? '/mes' : '/año') : ''}</span>
+                          ${option.price} <span className="text-sm font-normal text-muted-foreground">{ebook.currency || 'USD'}{option.type !== 'one_time' ? (option.type === 'monthly' ? '/mes' : '/año') : ''}</span>
                         </div>
                       </Label>
                     </div>
                   ))
                 ) : (
-                  <div className={`flex items-start space-x-3 border rounded-xl p-4 cursor-pointer transition-all ${opcionSeleccionada === 'one_time' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50 border-muted-foreground/20'}`} onClick={() => setOpcionSeleccionada('one_time')}>
+                  <div className={`flex items-start space-x-3 border rounded-xl p-4 cursor-pointer transition-all border-green-600 bg-green-50 ring-1 ring-green-600`}>
                     <RadioGroupItem value="one_time" id="one_time" className="mt-1" />
                     <Label htmlFor="one_time" className="flex-1 cursor-pointer">
-                      <div className="font-semibold text-base">Pago único</div>
-                      <div className="text-3xl font-extrabold mt-1 text-primary">${ebook.price} <span className="text-sm font-normal text-muted-foreground">{ebook.currency}</span></div>
+                      <div className="font-semibold text-base">Contenido gratuito</div>
+                      <div className="text-3xl font-extrabold mt-1 text-green-600">$0 <span className="text-sm font-normal text-muted-foreground">{ebook.currency || 'USD'}</span></div>
                       <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
                         <CheckCircle className="h-3 w-3 text-green-600" /> Descarga instantánea
                       </div>

@@ -36,7 +36,7 @@ export default function CursoDetalle() {
         lessons: lData.filter(l => l.module_id === m.id)
       }));
 
-      const { data: pData } = await supabase.from('course_pricing').select('*').eq('course_id', id);
+      const { data: pData } = await supabase.from('pricing_options').select('*').eq('product_id', id);
       const { data: profData } = await supabase.from('profiles').select('*').eq('id', hub.profesor_id).single();
 
       return {

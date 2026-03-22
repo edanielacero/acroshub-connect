@@ -63,7 +63,7 @@ export function HubLayout() {
   let backLink = "/mi-cuenta";
   let backText = "Volver a mis academias";
 
-  if (location.pathname.includes('/clase/') || location.pathname.includes('/curso/')) {
+  if (location.pathname.includes('/clase/') || location.pathname.includes('/curso/') || location.pathname.includes('/ebook/')) {
     backLink = `/${hub.slug}/productos`;
     backText = `Volver a ${hub.name}`;
   } else if (location.pathname.endsWith('/productos') || location.pathname === `/${hub.slug}`) {

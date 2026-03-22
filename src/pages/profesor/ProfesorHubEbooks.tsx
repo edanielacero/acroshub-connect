@@ -122,18 +122,35 @@ export default function ProfesorHubEbooks() {
     if (!editHasLifetime && !editHasMonthly && !editHasAnnual) { toast.error("Debes seleccionar al menos un modo de suscripción"); return; }
     
     setIsEditing(true);
+
+    // 1. Update ebook title/description
     const { error } = await supabase.from('ebooks').update({
       title: editEbookName,
       description: editEbookDesc
     }).eq('id', editingEbook.id);
 
-    setIsEditing(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setIsEditing(false); return; }
 
+    // 2. Replace all pricing options: delete existing, then insert new ones
+    await supabase.from('pricing_options').delete().eq('product_id', editingEbook.id);
+
+    const newPricing: any[] = [];
+    if (editHasLifetime) newPricing.push({ product_id: editingEbook.id, product_type: 'ebook', type: 'one-time', price: Number(editLifetimePrice) || 0, currency: 'USD' });
+    if (editHasMonthly) newPricing.push({ product_id: editingEbook.id, product_type: 'ebook', type: 'monthly', price: Number(editMonthlyPrice) || 0, currency: 'USD' });
+    if (editHasAnnual) newPricing.push({ product_id: editingEbook.id, product_type: 'ebook', type: 'annual', price: Number(editAnnualPrice) || 0, currency: 'USD' });
+
+    if (newPricing.length > 0) {
+      const { error: pErr } = await supabase.from('pricing_options').insert(newPricing);
+      if (pErr) { toast.error(pErr.message); setIsEditing(false); return; }
+    }
+
+    setIsEditing(false);
     toast.success(`Ebook "${editEbookName}" actualizado correctamente`);
     queryClient.invalidateQueries({ queryKey: ['ebooks'] });
+    queryClient.invalidateQueries({ queryKey: ['pricing_options'] });
     setEditingEbook(null);
   };
+
 
   if (isLoading) return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
   if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">HUB no encontrado</p></ProfesorLayout>;

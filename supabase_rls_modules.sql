@@ -82,3 +82,5 @@ DROP POLICY IF EXISTS "Pricing Insert" ON public.pricing_options;
 CREATE POLICY "Pricing Insert" ON public.pricing_options FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Pricing Update" ON public.pricing_options;
 CREATE POLICY "Pricing Update" ON public.pricing_options FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Pricing Delete" ON public.pricing_options;
+CREATE POLICY "Pricing Delete" ON public.pricing_options FOR DELETE USING (true);
