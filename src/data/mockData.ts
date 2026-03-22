@@ -19,11 +19,13 @@ export interface Profesor extends User {
   stripeConnected: boolean;
   stripeEmail?: string;
   emergencyEmail?: string;
+  manualPaymentLink?: string;
 }
 
 export interface Alumno extends User {
   role: 'alumno';
   purchasedCourses: string[];
+  purchasedEbooks: string[];
   completedLessons: string[];
 }
 
@@ -40,6 +42,12 @@ export interface Hub {
   studentsCount: number;
 }
 
+export interface PricingOption {
+  id: string;
+  type: 'one_time' | 'monthly' | 'annual';
+  price: number;
+}
+
 export interface Course {
   id: string;
   hubId: string;
@@ -51,6 +59,22 @@ export interface Course {
   currency: string;
   modules: Module[];
   published: boolean;
+  pricingOptions?: PricingOption[];
+}
+
+export interface Ebook {
+  id: string;
+  hubId: string;
+  profesorId: string;
+  title: string;
+  description: string;
+  image: string;
+  price: number;
+  currency: string;
+  published: boolean;
+  pages: number;
+  format: 'pdf' | 'epub';
+  pricingOptions?: PricingOption[];
 }
 
 export interface Module {
@@ -130,7 +154,7 @@ export const profesores: Profesor[] = [
   {
     id: 'prof-1', name: 'Carlos Mendoza', email: 'carlos@trading.com', role: 'profesor',
     plan: 'pro', status: 'activo', billingCycle: 'anual', currentPeriodStart: '2025-01-05', currentPeriodEnd: '2026-01-05', scheduledDowngradePlan: null, stripeConnected: true, stripeEmail: 'carlos@stripe.com',
-    emergencyEmail: 'carlos.emergencia@gmail.com', avatar: '', createdAt: '2024-08-15',
+    emergencyEmail: 'carlos.emergencia@gmail.com', avatar: '', createdAt: '2024-08-15', manualPaymentLink: 'https://wa.me/1234567890'
   },
   {
     id: 'prof-2', name: 'María García', email: 'maria@marketing.com', role: 'profesor',
@@ -145,18 +169,18 @@ export const profesores: Profesor[] = [
 ];
 
 export const alumnos: Alumno[] = [
-  { id: 'alu-1', name: 'Ana López', email: 'ana@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-01', purchasedCourses: ['course-1', 'course-3'], completedLessons: ['lesson-1-1', 'lesson-1-2'] },
-  { id: 'alu-2', name: 'Pedro Sánchez', email: 'pedro@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-15', purchasedCourses: ['course-1'], completedLessons: ['lesson-1-1'] },
-  { id: 'alu-3', name: 'Laura Martínez', email: 'laura@mail.com', role: 'alumno', avatar: '', createdAt: '2024-11-01', purchasedCourses: ['course-2', 'course-4'], completedLessons: [] },
-  { id: 'alu-4', name: 'Diego Torres', email: 'diego@mail.com', role: 'alumno', avatar: '', createdAt: '2024-11-20', purchasedCourses: ['course-1', 'course-2'], completedLessons: ['lesson-1-1', 'lesson-1-2', 'lesson-1-3'] },
-  { id: 'alu-5', name: 'Sofía Hernández', email: 'sofia@mail.com', role: 'alumno', avatar: '', createdAt: '2024-12-01', purchasedCourses: ['course-3'], completedLessons: [] },
-  { id: 'alu-6', name: 'Miguel Ángel Ruiz', email: 'miguel@mail.com', role: 'alumno', avatar: '', createdAt: '2024-12-15', purchasedCourses: ['course-5'], completedLessons: ['lesson-5-1'] },
-  { id: 'alu-7', name: 'Valentina Díaz', email: 'valentina@mail.com', role: 'alumno', avatar: '', createdAt: '2025-01-01', purchasedCourses: ['course-1', 'course-5'], completedLessons: [] },
-  { id: 'alu-8', name: 'Andrés Moreno', email: 'andres@mail.com', role: 'alumno', avatar: '', createdAt: '2025-01-10', purchasedCourses: ['course-4'], completedLessons: ['lesson-4-1'] },
-  { id: 'alu-9', name: 'Camila Vargas', email: 'camila@mail.com', role: 'alumno', avatar: '', createdAt: '2025-01-20', purchasedCourses: ['course-2'], completedLessons: [] },
-  { id: 'alu-10', name: 'Roberto Castro', email: 'roberto@mail.com', role: 'alumno', avatar: '', createdAt: '2025-02-01', purchasedCourses: ['course-3', 'course-6'], completedLessons: ['lesson-3-1'] },
-  { id: 'alu-11', name: 'Isabella Flores', email: 'isabella@mail.com', role: 'alumno', avatar: '', createdAt: '2025-02-10', purchasedCourses: ['course-6'], completedLessons: [] },
-  { id: 'alu-12', name: 'Fernando Jiménez', email: 'fernando@mail.com', role: 'alumno', avatar: '', createdAt: '2025-02-20', purchasedCourses: ['course-1'], completedLessons: ['lesson-1-1'] },
+  { id: 'alu-1', name: 'Ana López', email: 'ana@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-01', purchasedCourses: ['course-1', 'course-3'], purchasedEbooks: ['ebook-1'], completedLessons: ['lesson-1-1', 'lesson-1-2'] },
+  { id: 'alu-2', name: 'Pedro Sánchez', email: 'pedro@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-15', purchasedCourses: ['course-1'], purchasedEbooks: [], completedLessons: ['lesson-1-1'] },
+  { id: 'alu-3', name: 'Laura Martínez', email: 'laura@mail.com', role: 'alumno', avatar: '', createdAt: '2024-11-01', purchasedCourses: ['course-2', 'course-4'], purchasedEbooks: ['ebook-2'], completedLessons: [] },
+  { id: 'alu-4', name: 'Diego Torres', email: 'diego@mail.com', role: 'alumno', avatar: '', createdAt: '2024-11-20', purchasedCourses: ['course-1', 'course-2'], purchasedEbooks: [], completedLessons: ['lesson-1-1', 'lesson-1-2', 'lesson-1-3'] },
+  { id: 'alu-5', name: 'Sofía Hernández', email: 'sofia@mail.com', role: 'alumno', avatar: '', createdAt: '2024-12-01', purchasedCourses: ['course-3'], purchasedEbooks: [], completedLessons: [] },
+  { id: 'alu-6', name: 'Miguel Ángel Ruiz', email: 'miguel@mail.com', role: 'alumno', avatar: '', createdAt: '2024-12-15', purchasedCourses: ['course-5'], purchasedEbooks: [], completedLessons: ['lesson-5-1'] },
+  { id: 'alu-7', name: 'Valentina Díaz', email: 'valentina@mail.com', role: 'alumno', avatar: '', createdAt: '2025-01-01', purchasedCourses: ['course-1', 'course-5'], purchasedEbooks: [], completedLessons: [] },
+  { id: 'alu-8', name: 'Andrés Moreno', email: 'andres@mail.com', role: 'alumno', avatar: '', createdAt: '2025-01-10', purchasedCourses: ['course-4'], purchasedEbooks: [], completedLessons: ['lesson-4-1'] },
+  { id: 'alu-9', name: 'Camila Vargas', email: 'camila@mail.com', role: 'alumno', avatar: '', createdAt: '2025-01-20', purchasedCourses: ['course-2'], purchasedEbooks: [], completedLessons: [] },
+  { id: 'alu-10', name: 'Roberto Castro', email: 'roberto@mail.com', role: 'alumno', avatar: '', createdAt: '2025-02-01', purchasedCourses: ['course-3', 'course-6'], purchasedEbooks: [], completedLessons: ['lesson-3-1'] },
+  { id: 'alu-11', name: 'Isabella Flores', email: 'isabella@mail.com', role: 'alumno', avatar: '', createdAt: '2025-02-10', purchasedCourses: ['course-6'], purchasedEbooks: [], completedLessons: [] },
+  { id: 'alu-12', name: 'Fernando Jiménez', email: 'fernando@mail.com', role: 'alumno', avatar: '', createdAt: '2025-02-20', purchasedCourses: ['course-1'], purchasedEbooks: [], completedLessons: ['lesson-1-1'] },
 ];
 
 const createQuiz = (prefix: string): QuizQuestion[] => [
@@ -196,6 +220,11 @@ export const courses: Course[] = [
   },
   {
     id: 'course-2', hubId: 'hub-1', profesorId: 'prof-1', title: 'Estrategias Avanzadas', description: 'Técnicas avanzadas para traders experimentados.', image: '', price: 79.99, currency: 'USD', published: true,
+    pricingOptions: [
+      { id: 'po-1', type: 'monthly', price: 19.99 },
+      { id: 'po-2', type: 'annual', price: 149.99 },
+      { id: 'po-3', type: 'one_time', price: 299.99 }
+    ],
     modules: [
       { id: 'mod-2-1', courseId: 'course-2', title: 'Price Action', order: 1, lessons: createLessons('mod-2-1', 4, 13) },
       { id: 'mod-2-2', courseId: 'course-2', title: 'Indicadores Avanzados', order: 2, lessons: createLessons('mod-2-2', 3, 17) },
@@ -231,6 +260,15 @@ export const courses: Course[] = [
       { id: 'mod-6-3', courseId: 'course-6', title: 'Nutrición Deportiva', order: 3, lessons: createLessons('mod-6-3', 3, 54) },
     ],
   },
+];
+
+export const ebooks: Ebook[] = [
+  {
+    id: 'ebook-1', hubId: 'hub-1', profesorId: 'prof-1', title: 'Guía Definitiva de Velas Japonesas', description: 'Aprende a interpretar patrones de velas gráficas para mejorar tus entradas.', image: '', price: 19.99, currency: 'USD', published: true, pages: 120, format: 'pdf'
+  },
+  {
+    id: 'ebook-2', hubId: 'hub-3', profesorId: 'prof-2', title: 'Copywriting para Redes Sociales', description: 'Plantillas y fórmulas para escribir textos persuasivos en internet.', image: '', price: 14.99, currency: 'USD', published: true, pages: 85, format: 'epub'
+  }
 ];
 
 export const comments: Comment[] = [

@@ -17,10 +17,13 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email.includes("admin")) {
+      localStorage.setItem('acroshub_role', 'admin');
       navigate("/admin");
     } else if (email.includes("profesor") || email.includes("carlos") || email.includes("maria")) {
+      localStorage.setItem('acroshub_role', 'profesor');
       navigate("/dashboard");
     } else {
+      localStorage.setItem('acroshub_role', 'alumno');
       navigate("/mi-cuenta");
     }
     toast.success("¡Bienvenido de vuelta!");

@@ -55,6 +55,13 @@ export default function ProfesorConfiguracion() {
               <Input defaultValue={prof.emergencyEmail || ''} type="email" />
               <p className="text-xs text-muted-foreground">En caso de emergencia contactaremos aquí</p>
             </div>
+            <div className="space-y-2 pt-2">
+              <Label>Link para Compra Manual</Label>
+              <Input defaultValue={prof.manualPaymentLink || ''} type="url" placeholder="ej. https://wa.me/1234567890" />
+              <p className="text-xs text-muted-foreground">
+                Usa un enlace de WhatsApp u otro método para que los clientes te hablen si prefieres ventas manuales.
+              </p>
+            </div>
             <div className="space-y-3 pt-4 border-t mt-4">
               <Label className="block text-base font-medium">Contraseña</Label>
               <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>

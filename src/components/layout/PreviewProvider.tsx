@@ -16,7 +16,8 @@ export const PreviewContext = createContext<PreviewContextType>({
 
 export function PreviewProvider({ children }: { children: ReactNode }) {
   const { slug } = useParams();
-  const prof = getCurrentProfesor();
+  const role = localStorage.getItem('acroshub_role') || 'alumno'; // defecto alumno
+  const prof = role === 'profesor' ? getCurrentProfesor() : null;
   const hub = hubs.find(h => h.slug === slug);
   const isOwner = !!(prof && hub && prof.id === hub.profesorId);
 
