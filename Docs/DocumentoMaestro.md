@@ -133,7 +133,6 @@ Profesor
     │       └── Clase (video + PDF + texto + quiz opcional)
     │           └── Preview gratuita (opcional, configurable por clase)
     ├── Ebook (PDF con visor seguro integrado, sin descarga)
-    ├── Bundle (conjunto de cursos + ebooks a precio especial)
     └── HUB completo (producto que da acceso a todo el contenido del HUB)
 ```
 
@@ -143,7 +142,6 @@ Profesor
 |---|---|
 | Curso individual | Acceso a un curso específico |
 | Ebook individual | PDF con visor seguro, sin descarga |
-| Bundle | Varios cursos y/o ebooks juntos |
 | HUB completo | Acceso a todo el contenido del HUB |
 
 ### 2.4 Sistema de Videos
@@ -695,6 +693,9 @@ El prototipo visual de toda la plataforma (fase UI) está 100% completo, estabil
 - ✅ Theming dinámico por Hub (colores personalizados inyectados como HSL)
 - ✅ Notificaciones y Alertas In-App para Suscripciones
 - ✅ Navegación jerárquica con barra de retroceso contextual
+- ✅ Portal del Alumno: Ajustes de Perfil y Panel de Suscripciones (cancelaciones)
+- ✅ Dashboard del Profesor: Flujo interactivo de Onboarding (Checklist inicial)
+- ✅ Panel Super Admin: Buscador global en cabecera
 
 ### 6.3 Lo que FALTA implementar (Backend)
 
