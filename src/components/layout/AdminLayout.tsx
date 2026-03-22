@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, DollarSign } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, DollarSign, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
@@ -50,7 +51,19 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex-1 min-w-0" />
+          <div className="flex-1 min-w-0 flex justify-end px-4">
+            <div className="relative w-full max-w-sm hidden sm:block">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar alumnos o transacciones..."
+                className="w-full bg-muted/40 shadow-none appearance-none pl-8 md:w-[250px] lg:w-[350px]"
+              />
+            </div>
+            <Button variant="ghost" size="icon" className="sm:hidden ml-auto">
+              <Search className="h-5 w-5" />
+            </Button>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 px-2 sm:px-3 hover:bg-transparent hover:text-foreground">

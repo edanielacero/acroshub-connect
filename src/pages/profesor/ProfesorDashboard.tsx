@@ -1,10 +1,10 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
 import { MetricCard } from "@/components/shared/MetricCard";
-import { getCurrentProfesor, sales, courses, getUnrepliedComments, getRelativeTime, hubs } from "@/data/mockData";
-import { Users, DollarSign, BookOpen, Crown, Calendar, AlertCircle, AlertTriangle, CalendarClock, MessageSquare } from "lucide-react";
+import { getCurrentProfesor, sales, courses, ebooks, getUnrepliedComments, getRelativeTime, hubs } from "@/data/mockData";
+import { Users, DollarSign, BookOpen, Crown, Calendar, AlertCircle, AlertTriangle, CalendarClock, MessageSquare, Check, Circle } from "lucide-react";
 import { parseISO, differenceInDays, addMonths } from "date-fns";
 import { formatDateProject } from "@/lib/utils";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,16 @@ export default function ProfesorDashboard() {
   const totalStudents = new Set(profSales.map(s => s.alumnoId)).size;
   const thisMonthAmount = thisMonth.reduce((a, s) => a + s.amount, 0).toFixed(2);
   const thisMonthCount = thisMonth.length;
+  
+  // Onboarding Logic
+  const profHubs = hubs.filter(h => h.profesorId === prof.id);
+  const profEbooks = ebooks.filter(e => profHubs.some(h => h.id === e.hubId));
+  const hasHub = profHubs.length > 0;
+  const hasProduct = profCourses.length > 0 || profEbooks.length > 0;
+  const hasPayments = !!(prof.stripeConnected || prof.manualPaymentLink);
+  const completedSteps = [hasHub, hasProduct, hasPayments].filter(Boolean).length;
+  const progressPercent = Math.round((completedSteps / 3) * 100);
+  const isOnboardingComplete = completedSteps === 3;
   
   const today = new Date();
   const daysUntilRenewal = prof.currentPeriodEnd ? differenceInDays(parseISO(prof.currentPeriodEnd), today) : null;
@@ -47,6 +57,68 @@ export default function ProfesorDashboard() {
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in pb-10">
         <h1 className="text-2xl font-bold">Dashboard</h1>
+
+        {/* Onboarding Flow */}
+        {!isOnboardingComplete && (
+          <Card className="border-primary/20 bg-primary/5 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl">¡Bienvenido a Acroshub! 👋</CardTitle>
+              <CardDescription className="text-base text-muted-foreground/80">Sigue estos pasos para configurar tu academia y empezar a vender sin comisiones.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6 space-y-2">
+                <div className="flex justify-between text-sm font-medium">
+                  <span>Progreso de configuración</span>
+                  <span>{progressPercent}%</span>
+                </div>
+                <div className="h-2 w-full max-w-md bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary transition-all duration-500 ease-in-out" style={{ width: `${progressPercent}%` }} />
+                </div>
+              </div>
+              
+              <div className="grid gap-3 sm:grid-cols-3">
+                {/* Step 1 */}
+                <Link to="/dashboard/hubs" className={`p-4 rounded-lg border transition-colors ${hasHub ? 'bg-background/60 border-green-200 opacity-75' : 'bg-background hover:border-primary cursor-pointer shadow-sm'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 rounded-full p-1 ${hasHub ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                      {hasHub ? <Check className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <h4 className={`font-semibold ${hasHub ? 'text-green-800 line-through' : ''}`}>1. Crea tu Academia</h4>
+                      <p className="text-xs text-muted-foreground mt-1">Personaliza tu logo, colores y nombre de tu Hub.</p>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Step 2 */}
+                <Link to={hasHub ? "/dashboard/hubs" : "#"} className={`p-4 rounded-lg border transition-colors ${hasProduct ? 'bg-background/60 border-green-200 opacity-75' : 'bg-background hover:border-primary shadow-sm'} ${!hasHub ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 rounded-full p-1 ${hasProduct ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                      {hasProduct ? <Check className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <h4 className={`font-semibold ${hasProduct ? 'text-green-800 line-through' : ''}`}>2. Sube un Producto</h4>
+                      <p className="text-xs text-muted-foreground mt-1">Sube tu primer curso en video o E-book PDF.</p>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Step 3 */}
+                <Link to="/dashboard/configuracion" className={`p-4 rounded-lg border transition-colors ${hasPayments ? 'bg-background/60 border-green-200 opacity-75' : 'bg-background hover:border-primary cursor-pointer shadow-sm'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 rounded-full p-1 ${hasPayments ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                      {hasPayments ? <Check className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <h4 className={`font-semibold ${hasPayments ? 'text-green-800 line-through' : ''}`}>3. Configura Pagos</h4>
+                      <p className="text-xs text-muted-foreground mt-1">Conecta Stripe o provee un link para venta manual.</p>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Banners */}
         {prof.scheduledDowngradePlan && (
