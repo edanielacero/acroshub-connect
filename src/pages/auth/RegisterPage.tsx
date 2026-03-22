@@ -6,18 +6,45 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"profesor" | "alumno">("alumno");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("¡Cuenta creada exitosamente!");
-    navigate(role === "profesor" ? "/dashboard" : "/mi-cuenta");
+    setLoading(true);
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+          role: role,
+        }
+      }
+    });
+
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    if (data.user && data.session) {
+      toast.success("¡Cuenta creada exitosamente!");
+      navigate(role === "profesor" ? "/dashboard" : "/mi-cuenta");
+    } else {
+      toast.info("Revisa tu correo para confirmar tu cuenta.");
+    }
   };
 
   return (
@@ -55,7 +82,10 @@ export default function RegisterPage() {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full">Crear cuenta</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loading ? "Creando cuenta..." : "Crear cuenta"}
+            </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             ¿Ya tienes cuenta? <Link to="/login" className="font-medium text-primary hover:underline">Inicia sesión</Link>

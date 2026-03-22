@@ -1,9 +1,12 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { hubs } from "@/data/mockData";
+import { useProfesorData } from "@/hooks/useProfesorData";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Book, GripVertical, Plus } from "lucide-react";
+import { ArrowLeft, Book, BookCopy, GripVertical, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -15,15 +18,27 @@ import { Switch } from "@/components/ui/switch";
 export default function ProfesorHubEbooks() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const hub = hubs.find(h => h.id === id);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { hubs, ebooks, pricingOptions = [], isLoading } = useProfesorData();
+  
+  const hub = hubs.find((h: any) => h.id === id);
+  const hubEbooks = ebooks.filter((e: any) => e.hub_id === id);
 
-  // MOCK DATA for local testing
-  const hubEbooks: any[] = [
-    { id: "ebook-1", hubId: id, title: "Guía Definitiva de React", description: "Aprende a crear apps modernas", price: 19.99, modules: [] }
-  ];
+  // Helper: get pricing for a given ebook
+  const getPricing = (ebookId: string) => pricingOptions.filter((p: any) => p.product_id === ebookId);
+  const getPriceLabel = (ebookId: string) => {
+    const prices = getPricing(ebookId);
+    if (prices.length === 0) return 'Sin precio';
+    return prices.map((p: any) => {
+      const label = p.type === 'one-time' ? 'Único' : p.type === 'monthly' ? 'Mensual' : 'Anual';
+      return `$${Number(p.price).toFixed(2)} ${label}`;
+    }).join(' · ');
+  };
 
   // --- CREATE EBOOK MODAL STATES ---
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newEbookName, setNewEbookName] = useState("");
   const [newEbookDesc, setNewEbookDesc] = useState("");
   const [hasLifetime, setHasLifetime] = useState(true);
@@ -33,26 +48,43 @@ export default function ProfesorHubEbooks() {
   const [hasAnnual, setHasAnnual] = useState(false);
   const [annualPrice, setAnnualPrice] = useState("");
 
-  const handleCreateEbook = () => {
+  const handleCreateEbook = async () => {
     if (!newEbookName.trim()) { toast.error("El nombre del ebook es requerido"); return; }
     if (!hasLifetime && !hasMonthly && !hasAnnual) { toast.error("Debes seleccionar al menos un modo de suscripción"); return; }
-    if (hasLifetime && (!lifetimePrice || isNaN(Number(lifetimePrice)) || Number(lifetimePrice) < 0)) {
-      toast.error("El precio de pago único es requerido y no puede ser negativo"); return;
-    }
-    if (hasMonthly && (!monthlyPrice || isNaN(Number(monthlyPrice)) || Number(monthlyPrice) < 0)) {
-      toast.error("El precio mensual es requerido y no puede ser negativo"); return;
-    }
-    if (hasAnnual && (!annualPrice || isNaN(Number(annualPrice)) || Number(annualPrice) < 0)) {
-      toast.error("El precio anual es requerido y no puede ser negativo"); return;
+    
+    setIsCreating(true);
+
+    const { data: newEbook, error } = await supabase.from('ebooks').insert({
+      hub_id: id,
+      profesor_id: user?.id,
+      title: newEbookName,
+      description: newEbookDesc,
+      is_published: false
+    }).select().single();
+
+    if (error) {
+      toast.error(error.message);
+      setIsCreating(false);
+      return;
     }
 
+    const pricingOptions = [];
+    if (hasLifetime) pricingOptions.push({ product_id: newEbook.id, product_type: 'ebook', type: 'one-time', price: Number(lifetimePrice)||0, currency: 'USD' });
+    if (hasMonthly) pricingOptions.push({ product_id: newEbook.id, product_type: 'ebook', type: 'monthly', price: Number(monthlyPrice)||0, currency: 'USD' });
+    if (hasAnnual) pricingOptions.push({ product_id: newEbook.id, product_type: 'ebook', type: 'annual', price: Number(annualPrice)||0, currency: 'USD' });
+
+    if (pricingOptions.length > 0) await supabase.from('pricing_options').insert(pricingOptions);
+
     toast.success(`Ebook "${newEbookName}" creado exitosamente`);
+    queryClient.invalidateQueries({ queryKey: ['ebooks'] });
     setIsDialogOpen(false);
+    
     setNewEbookName(""); setNewEbookDesc("");
     setHasLifetime(true); setLifetimePrice("");
     setHasMonthly(false); setMonthlyPrice("");
     setHasAnnual(false); setAnnualPrice("");
-    navigate(`/dashboard/ebooks/ebook-1`); 
+    setIsCreating(false);
+    navigate(`/dashboard/ebooks/${newEbook.id}`); 
   };
 
   // --- EDIT EBOOK MODAL STATES ---
@@ -71,24 +103,39 @@ export default function ProfesorHubEbooks() {
     if (editingEbook) {
       setEditEbookName(editingEbook.title);
       setEditEbookDesc(editingEbook.description || "");
-      setEditHasLifetime(true);
-      setEditLifetimePrice(editingEbook.price?.toString() || "");
-      setEditHasMonthly(false); setEditMonthlyPrice("");
-      setEditHasAnnual(false); setEditAnnualPrice("");
+      const prices = getPricing(editingEbook.id);
+      const oneTime = prices.find((p: any) => p.type === 'one-time');
+      const monthly = prices.find((p: any) => p.type === 'monthly');
+      const annual = prices.find((p: any) => p.type === 'annual');
+      setEditHasLifetime(!!oneTime);
+      setEditLifetimePrice(oneTime ? String(oneTime.price) : "");
+      setEditHasMonthly(!!monthly);
+      setEditMonthlyPrice(monthly ? String(monthly.price) : "");
+      setEditHasAnnual(!!annual);
+      setEditAnnualPrice(annual ? String(annual.price) : "");
     }
   }, [editingEbook]);
 
-  const handleEditEbook = () => {
+  const [isEditing, setIsEditing] = useState(false);
+  const handleEditEbook = async () => {
     if (!editEbookName.trim()) { toast.error("El nombre del ebook es requerido"); return; }
     if (!editHasLifetime && !editHasMonthly && !editHasAnnual) { toast.error("Debes seleccionar al menos un modo de suscripción"); return; }
-    if (editHasLifetime && (!editLifetimePrice || isNaN(Number(editLifetimePrice)) || Number(editLifetimePrice) < 0)) { toast.error("El precio de pago único es inválido"); return; }
-    if (editHasMonthly && (!editMonthlyPrice || isNaN(Number(editMonthlyPrice)) || Number(editMonthlyPrice) < 0)) { toast.error("El precio mensual es inválido"); return; }
-    if (editHasAnnual && (!editAnnualPrice || isNaN(Number(editAnnualPrice)) || Number(editAnnualPrice) < 0)) { toast.error("El precio anual es inválido"); return; }
+    
+    setIsEditing(true);
+    const { error } = await supabase.from('ebooks').update({
+      title: editEbookName,
+      description: editEbookDesc
+    }).eq('id', editingEbook.id);
+
+    setIsEditing(false);
+    if (error) { toast.error(error.message); return; }
 
     toast.success(`Ebook "${editEbookName}" actualizado correctamente`);
+    queryClient.invalidateQueries({ queryKey: ['ebooks'] });
     setEditingEbook(null);
   };
 
+  if (isLoading) return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
   if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">HUB no encontrado</p></ProfesorLayout>;
 
   return (
@@ -205,7 +252,10 @@ export default function ProfesorHubEbooks() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreateEbook}>Continuar</Button>
+                <Button onClick={handleCreateEbook} disabled={isCreating}>
+                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {isCreating ? 'Guardando...' : 'Continuar'}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -229,7 +279,7 @@ export default function ProfesorHubEbooks() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-base truncate">{eb.title}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{eb.price === 0 ? 'Gratis' : `$${eb.price}`}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{getPriceLabel(eb.id)}</p>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0 sm:flex-row shrink-0">
@@ -342,7 +392,10 @@ export default function ProfesorHubEbooks() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingEbook(null)}>Cancelar</Button>
-            <Button onClick={handleEditEbook}>Guardar Cambios</Button>
+            <Button onClick={handleEditEbook} disabled={isEditing}>
+               {isEditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+               {isEditing ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

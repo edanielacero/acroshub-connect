@@ -1,7 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { useMemo, useState, useEffect } from "react";
-import { alumnos, courses, studentPayments, getCurrentProfesor, lessonProgress, StudentPayment } from "@/data/mockData";
+import { useState } from "react";
+import { useProfesorData } from "@/hooks/useProfesorData";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, ChevronDown, ChevronUp, MoreHorizontal, AlertTriangle, Plus } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, MoreHorizontal, AlertTriangle, Plus, Loader2 } from "lucide-react";
 import { formatDateProject } from "@/lib/utils";
 import { toast } from "sonner";
 import { addDays, differenceInDays } from "date-fns";
@@ -22,30 +24,45 @@ import { addDays, differenceInDays } from "date-fns";
 export default function ProfesorAlumnoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const prof = getCurrentProfesor();
+  const queryClient = useQueryClient();
+  const { enrollments, courses, ebooks, isLoading } = useProfesorData();
 
-  const baseAlumno = useMemo(() => alumnos.find(a => a.id === id), [id]);
+  const studentEnrollments = enrollments.filter(e => e.alumno_id === id);
+  const studentProfile = studentEnrollments[0]?.profiles;
+  const studentName = (studentProfile as any)?.full_name || 'Alumno Desconocido';
+  const studentFirstAccess = studentEnrollments.length > 0 
+    ? studentEnrollments.sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0].created_at 
+    : new Date().toISOString();
 
-  // States to mimic mutations
-  const [payments, setPayments] = useState<StudentPayment[]>(
-    studentPayments.filter(sp => sp.userId === id && sp.tenantId === prof.id)
-  );
-  const [activeProducts, setActiveProducts] = useState(
-    baseAlumno?.purchasedCourses.map((cId, idx) => ({
-      courseId: cId,
-      course: courses.find(c => c.id === cId),
-      origin: idx === 0 ? 'stripe' : 'manual',
-      type: 'Curso',
-      subscriptionType: idx === 0 ? 'Mensual' : 'Único Pago',
-      accessDate: baseAlumno.createdAt,
-      expirationDate: idx === 0 ? addDays(new Date(baseAlumno.createdAt), 30).toISOString() : null,
-    })) || []
-  );
+  const activeProducts = studentEnrollments.map(e => {
+    const isCourse = e.product_type === 'course';
+    const product = isCourse ? courses.find(c => c.id === e.product_id) : ebooks.find(book => book.id === e.product_id);
+    
+    return {
+      enrollmentId: e.id,
+      productId: e.product_id,
+      productTitle: product?.title || 'Producto desconocido',
+      productType: isCourse ? 'Curso' : 'Ebook',
+      subscriptionType: e.access_type === 'lifetime' ? 'Único Pago' : 'Suscripción',
+      origin: 'Sistema', 
+      accessDate: e.created_at,
+      expirationDate: null as string | null, 
+      status: e.status, 
+    };
+  });
+  
+  const payments = studentEnrollments.map(e => ({
+     id: e.id,
+     createdAt: e.created_at,
+     productId: e.product_id,
+     amount: 0,
+     method: 'manual',
+     notes: 'Matrícula automática'
+  }));
 
   // Modal States
   const [isExtendOpen, setIsExtendOpen] = useState(false);
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   // New Payment Form State
@@ -54,59 +71,54 @@ export default function ProfesorAlumnoDetail() {
   const [paySubscription, setPaySubscription] = useState("");
   const [payNotes, setPayNotes] = useState("");
 
-  useEffect(() => {
-    if (payProduct) {
-      const course = courses.find(c => c.id === payProduct);
-      if (course) {
-        setPayAmount(course.price.toString());
-      }
-    } else {
-      setPayAmount("0");
-    }
-  }, [payProduct]);
-
-  if (!baseAlumno) {
+  if (isLoading) {
     return (
       <ProfesorLayout>
-        <div className="p-8 text-center text-muted-foreground">Alumno no encontrado</div>
+        <div className="flex h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </ProfesorLayout>
+    );
+  }
+
+  if (activeProducts.length === 0 && studentEnrollments.length === 0) {
+    return (
+      <ProfesorLayout>
+        <div className="p-8 text-center text-muted-foreground">Alumno no encontrado o sin cursos</div>
       </ProfesorLayout>
     );
   }
 
   const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
 
-  const handleRegisterPayment = (e: React.FormEvent) => {
+  const handleRegisterPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!payProduct || !payAmount || !paySubscription) {
-      toast.error("Completa producto, monto y tipo de suscripción obligatoriamente.");
+    if (!payProduct || !paySubscription) {
+      toast.error("Selecciona producto y suscripción.");
       return;
     }
-    const newPayment: StudentPayment = {
-      id: "sp-" + Math.random().toString(36).substr(2, 9),
-      tenantId: prof.id,
-      userId: baseAlumno.id,
-      productId: payProduct,
-      amount: parseFloat(payAmount),
-      method: 'manual' as any,
-      notes: payNotes,
-      createdAt: new Date().toISOString()
-    };
     
-    // Create enrollment if it doesn't exist
-    if (!activeProducts.find(p => p.courseId === payProduct)) {
-      setActiveProducts(prev => [...prev, {
-        courseId: payProduct,
-        course: courses.find(c => c.id === payProduct),
-        origin: 'manual',
-        type: 'Curso',
-        subscriptionType: paySubscription === 'unico' ? 'Único Pago' : (paySubscription === 'mensual' ? 'Mensual' : 'Anual'),
-        accessDate: new Date().toISOString(),
-        expirationDate: paySubscription === 'unico' ? null : addDays(new Date(), paySubscription === 'mensual' ? 30 : 365).toISOString(),
-      }]);
+    // Check if user is already enrolled
+    if (activeProducts.find(p => p.productId === payProduct)) {
+      toast.error("El alumno ya tiene acceso a este producto");
+      return;
     }
     
-    setPayments(prev => [newPayment, ...prev]);
-    toast.success("Pago registrado correctamente");
+    const { error } = await supabase.from('enrollments').insert({
+      alumno_id: id,
+      product_id: payProduct,
+      product_type: 'course', // MVP assumption that form selects courses
+      access_type: paySubscription === 'unico' ? 'lifetime' : 'subscription',
+      status: 'active'
+    });
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Pago registrado y acceso concedido.");
+    queryClient.invalidateQueries({ queryKey: ['enrollments'] });
     setPayProduct("");
     setPayAmount("0");
     setPaySubscription("");
@@ -152,7 +164,7 @@ export default function ProfesorAlumnoDetail() {
             <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
             <div>
               <p className="font-semibold">Atención: Suscripción por vencer</p>
-              <p className="text-sm">El acceso del alumno a <span className="font-semibold">{expiringSub.course?.title}</span> vence en {differenceInDays(new Date(expiringSub.expirationDate!), new Date())} días.</p>
+              <p className="text-sm">El acceso del alumno a <span className="font-semibold">{expiringSub.productTitle}</span> vence en {differenceInDays(new Date(expiringSub.expirationDate!), new Date())} días.</p>
             </div>
           </div>
         )}
@@ -162,7 +174,7 @@ export default function ProfesorAlumnoDetail() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/alumnos')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">{baseAlumno.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{studentName}</h1>
         </div>
 
         {/* Info Grid */}
@@ -170,11 +182,11 @@ export default function ProfesorAlumnoDetail() {
           <CardContent className="grid gap-6 p-6 sm:grid-cols-2 lg:grid-cols-4 items-center">
             <div>
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Email</p>
-              <p className="font-semibold">{baseAlumno.email}</p>
+              <p className="font-semibold">Protegido</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Primer acceso</p>
-              <p className="font-semibold">{formatDateProject(baseAlumno.createdAt)}</p>
+              <p className="font-semibold">{formatDateProject(studentFirstAccess)}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Total pagado</p>
@@ -213,8 +225,8 @@ export default function ProfesorAlumnoDetail() {
                   <TableBody>
                     {activeProducts.map((p, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">{p.course?.title}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-muted-foreground">{p.type}</Badge></TableCell>
+                        <TableCell className="font-medium">{p.productTitle}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-muted-foreground">{p.productType}</Badge></TableCell>
                         <TableCell className="capitalize font-medium">{p.subscriptionType || 'Único Pago'}</TableCell>
                         <TableCell>{originBadge(p.origin)}</TableCell>
                         <TableCell>{formatDateProject(p.accessDate)}</TableCell>
@@ -252,7 +264,7 @@ export default function ProfesorAlumnoDetail() {
                 <Select value={payProduct} onValueChange={setPayProduct}>
                   <SelectTrigger><SelectValue placeholder="Elegir..." /></SelectTrigger>
                   <SelectContent>
-                    {courses.filter(c => c.profesorId === prof.id).map(c => (
+                    {courses.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
                     ))}
                   </SelectContent>
@@ -335,20 +347,17 @@ export default function ProfesorAlumnoDetail() {
             </CollapsibleTrigger>
             <CollapsibleContent className="px-6 pb-6 pt-0 space-y-6">
               {activeProducts.map((p, idx) => {
-                const completed = lessonProgress.filter(lp => lp.userId === baseAlumno.id).length || 5;
-                const total = p.course?.modules.reduce((acc, m) => acc + m.lessons.length, 0) || 10;
-                const percent = Math.min(100, Math.round((completed / total) * 100));
-
+                const percent = 0; // MVP no progress tracking yet
                 return (
                   <div key={idx} className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="font-medium">{p.course?.title}</span>
+                      <span className="font-medium">{p.productTitle}</span>
                       <span className="font-bold text-primary">{percent}% Completado</span>
                     </div>
                     <Progress value={percent} className="h-2" />
                     <div className="flex justify-between text-xs text-muted-foreground pt-1">
-                      <span>Última clase: Módulo 1 - Intro</span>
-                      <span>Actividad: {formatDateProject(new Date().toISOString())}</span>
+                      <span>Última clase: Intro</span>
+                      <span>Actividad: Reciente</span>
                     </div>
                   </div>
                 );
@@ -366,8 +375,8 @@ export default function ProfesorAlumnoDetail() {
           {selectedProduct && (
             <div className="space-y-4 py-2">
               <div className="p-3 bg-muted rounded-lg text-sm">
-                <p><span className="font-semibold">Producto:</span> {selectedProduct.course?.title}</p>
-                <p className="mt-1"><span className="font-semibold">Expiración actual:</span> {selectedProduct.expirationDate ? formatDateProject(selectedProduct.expirationDate) : 'Ilimitado'}</p>
+                <p><span className="font-semibold">Producto:</span> {selectedProduct.productTitle}</p>
+                <p className="mt-1"><span className="font-semibold">Expiración actual:</span> Ilimitado</p>
               </div>
               <div className="space-y-2">
                 <Label>Nueva fecha de expiración</Label>
@@ -377,7 +386,16 @@ export default function ProfesorAlumnoDetail() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsExtendOpen(false)}>Cancelar</Button>
-            <Button onClick={() => { toast.success("Acceso extendido exitosamente"); setIsExtendOpen(false); }}>Guardar</Button>
+            <Button onClick={async () => {
+              // For now, extend by updating the enrollment status to active
+              if (selectedProduct) {
+                const { error } = await supabase.from('enrollments').update({ status: 'active' }).eq('id', selectedProduct.enrollmentId);
+                if (error) { toast.error(error.message); return; }
+                queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+              }
+              toast.success("Acceso extendido exitosamente"); 
+              setIsExtendOpen(false); 
+            }}>Guardar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -387,14 +405,16 @@ export default function ProfesorAlumnoDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="text-destructive h-5 w-5" /> ¿Revocar acceso?</AlertDialogTitle>
             <AlertDialogDescription>
-              El alumno perderá el acceso a <span className="font-semibold">{selectedProduct?.course?.title}</span> inmediatamente. Esta acción no se puede deshacer.
+              El alumno perderá el acceso a <span className="font-semibold">{selectedProduct?.productTitle}</span> inmediatamente. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => {
-              setActiveProducts(prev => prev.filter(p => p.courseId !== selectedProduct.courseId));
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => {
+              await supabase.from('enrollments').delete().eq('id', selectedProduct.enrollmentId);
+              queryClient.invalidateQueries({ queryKey: ['enrollments'] });
               toast.success("Acceso revocado");
+              setIsRevokeOpen(false);
             }}>
               Revocar
             </AlertDialogAction>

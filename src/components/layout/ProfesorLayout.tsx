@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
-import { getCurrentProfesor } from "@/data/mockData";
+import { useAuth } from "@/contexts/AuthContext";
 
 const profLinks = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -18,7 +18,8 @@ export function ProfesorLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const prof = getCurrentProfesor();
+  const { user } = useAuth();
+  const profName = user?.user_metadata?.full_name || 'Profesor';
 
   return (
     <div className="min-h-screen flex bg-muted/30">
@@ -62,9 +63,9 @@ export function ProfesorLayout({ children }: { children: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 px-2 sm:px-3 max-w-full hover:bg-transparent hover:text-foreground">
                 <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium shrink-0">
-                  {prof.name.charAt(0)}
+                  {profName.charAt(0)}
                 </div>
-                <span className="hidden sm:inline truncate">{prof.name}</span>
+                <span className="hidden sm:inline truncate">{profName}</span>
                 <ChevronDown className="h-4 w-4 shrink-0" />
               </Button>
             </DropdownMenuTrigger>

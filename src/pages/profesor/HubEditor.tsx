@@ -1,25 +1,54 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { hubs, courses } from "@/data/mockData";
+import { useProfesorData } from "@/hooks/useProfesorData";
 import { useParams, Link } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function HubEditor() {
   const { id } = useParams();
-  const hub = hubs.find(h => h.id === id);
-  const [name, setName] = useState(hub?.name || '');
-  const [slug, setSlug] = useState(hub?.slug || '');
-  const [description, setDescription] = useState(hub?.description || '');
-  const [color, setColor] = useState(hub?.primaryColor || '#2563EB');
+  const queryClient = useQueryClient();
+  const { hubs, isLoading } = useProfesorData();
+  const hub = hubs.find((h: any) => h.id === id);
 
-  if (!hub) return <ProfesorLayout><p>HUB no encontrado</p></ProfesorLayout>;
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
+  const [color, setColor] = useState('#2563EB');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (hub) {
+      setName(hub.name || '');
+      setSlug(hub.slug || '');
+      setDescription(hub.description || '');
+      setColor(hub.primary_color || '#2563EB');
+    }
+  }, [hub]);
+
+  const handleSave = async () => {
+    if (!name || !slug) return toast.error("Nombre y Slug son obligatorios");
+    setIsSaving(true);
+    const { error } = await supabase.from('hubs').update({ name, slug, description, primary_color: color }).eq('id', id);
+    setIsSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Cambios guardados correctamente");
+    queryClient.invalidateQueries({ queryKey: ['hubs'] });
+  };
+
+  if (isLoading) {
+    return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
+  }
+
+  if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">HUB no encontrado</p></ProfesorLayout>;
 
   return (
     <ProfesorLayout>
@@ -79,7 +108,10 @@ export default function HubEditor() {
 
         </Tabs>
 
-        <Button className="w-full sm:w-auto" onClick={() => toast.success("Cambios guardados correctamente")}>Guardar cambios</Button>
+        <Button className="w-full sm:w-auto" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isSaving ? 'Guardando...' : 'Guardar cambios'}
+        </Button>
       </div>
     </ProfesorLayout>
   );

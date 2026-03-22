@@ -41,63 +41,73 @@ import AlumnoAjustes from "./pages/alumno/AlumnoAjustes";
 import AlumnoPagos from "./pages/alumno/AlumnoPagos";
 import { AlumnoLayout } from "./components/alumno/AlumnoLayout";
 import { HubLayout } from "./components/hub/HubLayout";
+import { AuthProvider } from "./contexts/AuthContext";
+import { RoleRoute } from "./components/auth/ProtectedRoutes";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Public */}
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-          {/* Admin */}
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/profesores" element={<AdminProfesores />} />
-          <Route path="/admin/profesores/:id" element={<AdminProfesorDetail />} />
-          <Route path="/admin/ventas" element={<AdminVentas />} />
-          <Route path="/admin/configuracion" element={<AdminConfiguracion />} />
+            {/* Admin */}
+            <Route element={<RoleRoute allowedRoles={['super_admin']} />}>
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/profesores" element={<AdminProfesores />} />
+              <Route path="/admin/profesores/:id" element={<AdminProfesorDetail />} />
+              <Route path="/admin/ventas" element={<AdminVentas />} />
+              <Route path="/admin/configuracion" element={<AdminConfiguracion />} />
+            </Route>
 
-          {/* Profesor */}
-          <Route path="/dashboard" element={<ProfesorDashboard />} />
-          <Route path="/dashboard/hubs" element={<ProfesorHubs />} />
-          <Route path="/dashboard/hubs/:id" element={<HubEditor />} />
-          <Route path="/dashboard/hubs/:id/cursos" element={<ProfesorHubCursos />} />
-          <Route path="/dashboard/hubs/:id/ebooks" element={<ProfesorHubEbooks />} />
-          <Route path="/dashboard/cursos/:id" element={<CourseEditor />} />
-          <Route path="/dashboard/ebooks/:id" element={<EbookEditor />} />
-          <Route path="/dashboard/comentarios" element={<ProfesorComentarios />} />
-          <Route path="/dashboard/comentarios/responder" element={<ProfesorResponderComentarios />} />
-          <Route path="/dashboard/alumnos" element={<ProfesorAlumnos />} />
-          <Route path="/dashboard/alumnos/:id" element={<ProfesorAlumnoDetail />} />
-          <Route path="/dashboard/ventas" element={<ProfesorVentas />} />
-          <Route path="/dashboard/configuracion" element={<ProfesorConfiguracion />} />
+            {/* Profesor */}
+            <Route element={<RoleRoute allowedRoles={['profesor']} />}>
+              <Route path="/dashboard" element={<ProfesorDashboard />} />
+              <Route path="/dashboard/hubs" element={<ProfesorHubs />} />
+              <Route path="/dashboard/hubs/:id" element={<HubEditor />} />
+              <Route path="/dashboard/hubs/:id/cursos" element={<ProfesorHubCursos />} />
+              <Route path="/dashboard/hubs/:id/ebooks" element={<ProfesorHubEbooks />} />
+              <Route path="/dashboard/cursos/:id" element={<CourseEditor />} />
+              <Route path="/dashboard/ebooks/:id" element={<EbookEditor />} />
+              <Route path="/dashboard/comentarios" element={<ProfesorComentarios />} />
+              <Route path="/dashboard/comentarios/responder" element={<ProfesorResponderComentarios />} />
+              <Route path="/dashboard/alumnos" element={<ProfesorAlumnos />} />
+              <Route path="/dashboard/alumnos/:id" element={<ProfesorAlumnoDetail />} />
+              <Route path="/dashboard/ventas" element={<ProfesorVentas />} />
+              <Route path="/dashboard/configuracion" element={<ProfesorConfiguracion />} />
+            </Route>
 
-          {/* Alumno */}
-          <Route element={<AlumnoLayout />}>
-            <Route path="/mi-cuenta" element={<AlumnoDashboard />} />
-            <Route path="/mis-ajustes" element={<AlumnoAjustes />} />
-            <Route path="/mis-pagos" element={<AlumnoPagos />} />
-          </Route>
+            {/* Alumno */}
+            <Route element={<RoleRoute allowedRoles={['alumno']} />}>
+              <Route element={<AlumnoLayout />}>
+                <Route path="/mi-cuenta" element={<AlumnoDashboard />} />
+                <Route path="/mis-ajustes" element={<AlumnoAjustes />} />
+                <Route path="/mis-pagos" element={<AlumnoPagos />} />
+              </Route>
+            </Route>
 
-          {/* Hub public & student (Shared HubLayout) */}
-          <Route path="/:slug" element={<HubLayout />}>
-            <Route index element={<PreviewProvider><HubLanding /></PreviewProvider>} />
-            <Route path="curso/:id" element={<PreviewProvider><CursoDetalle /></PreviewProvider>} />
-            <Route path="ebook/:id" element={<PreviewProvider><EbookDetalle /></PreviewProvider>} />
-            <Route path="productos" element={<PreviewProvider><HubProductos /></PreviewProvider>} />
-            <Route path="clase/:id" element={<PreviewProvider><ClaseReproductor /></PreviewProvider>} />
-          </Route>
+            {/* Hub public & student (Shared HubLayout) */}
+            <Route path="/:slug" element={<HubLayout />}>
+              <Route index element={<PreviewProvider><HubLanding /></PreviewProvider>} />
+              <Route path="curso/:id" element={<PreviewProvider><CursoDetalle /></PreviewProvider>} />
+              <Route path="ebook/:id" element={<PreviewProvider><EbookDetalle /></PreviewProvider>} />
+              <Route path="productos" element={<PreviewProvider><HubProductos /></PreviewProvider>} />
+              <Route path="clase/:id" element={<PreviewProvider><ClaseReproductor /></PreviewProvider>} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

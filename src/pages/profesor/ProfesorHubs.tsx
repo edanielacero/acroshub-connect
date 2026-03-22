@@ -1,26 +1,35 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { getCurrentProfesor, hubs } from "@/data/mockData";
+import { useProfesorData } from "@/hooks/useProfesorData";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { FolderOpen, Plus, CheckCircle2 } from "lucide-react";
+import { FolderOpen, Plus, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function ProfesorHubs() {
-  const prof = getCurrentProfesor();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { hubs: profHubs = [], courses = [], ebooks = [], isLoading } = useProfesorData();
   
-  // local state to fake UI creation
-  const [profHubs, setProfHubs] = useState(hubs.filter(h => h.profesorId === prof.id));
-
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newHubName, setNewHubName] = useState("");
   const [newHubSlug, setNewHubSlug] = useState("");
   const [newHubDescription, setNewHubDescription] = useState("");
+  
+  const [emptyHubAlertOpen, setEmptyHubAlertOpen] = useState(false);
+  const [selectedEmptyHub, setSelectedEmptyHub] = useState<any>(null);
 
   // Auto-generate slug when name changes for UX
   useEffect(() => {
@@ -28,48 +37,66 @@ export default function ProfesorHubs() {
     setNewHubSlug(baseSlug);
   }, [newHubName]);
 
-  // Slug Availability Logic
-  const isSlugTaken = newHubSlug.length > 0 && (hubs.some(h => h.slug === newHubSlug) || profHubs.some(h => h.slug === newHubSlug));
+  // Basic availability lookup on frontend logic (Supabase will double check on unique constraint)
+  const isSlugTaken = newHubSlug.length > 0 && profHubs.some((h: any) => h.slug === newHubSlug);
   const suggestedSlugs = isSlugTaken ? [
     `${newHubSlug}-1`,
     `${newHubSlug}-2`,
     `${newHubSlug}-academia`
   ] : [];
 
-  const handleCreateHub = (e: React.FormEvent) => {
+  const handleCreateHub = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newHubName || !newHubSlug) {
       toast.error("El nombre y el slug URL son obligatorios.");
       return;
     }
     
-    if (isSlugTaken) {
-      toast.error("El slug seleccionado ya está en uso. Por favor, elige otro.");
-      return;
-    }
+    setIsCreating(true);
     
-    // Add to mocked local state
-    const newHub = {
-      id: "hub-" + Math.random().toString(36).substr(2, 9),
-      profesorId: prof.id,
+    const { data, error } = await supabase.from('hubs').insert({
+      profesor_id: user?.id,
       name: newHubName,
       slug: newHubSlug,
       description: newHubDescription || "Nuevo hub educativo...",
-      logo: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=400&h=300&fit=crop",
-      coverImage: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=1200&h=400&fit=crop",
-      theme: "light",
-      primaryColor: "#000000",
-      coursesCount: 0,
-      studentsCount: 0
-    };
+    });
+
+    setIsCreating(false);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     
-    setProfHubs([newHub, ...profHubs]);
     toast.success("HUB creado exitosamente");
+    queryClient.invalidateQueries({ queryKey: ['hubs'] });
     setIsCreateOpen(false);
     setNewHubName("");
     setNewHubSlug("");
     setNewHubDescription("");
   };
+
+  const handleViewAsStudent = (hub: any) => {
+    const hubCourses = courses.filter((c: any) => c.hub_id === hub.id);
+    const hubEbooks = ebooks.filter((e: any) => e.hub_id === hub.id);
+
+    if (hubCourses.length === 0 && hubEbooks.length === 0) {
+      setSelectedEmptyHub(hub);
+      setEmptyHubAlertOpen(true);
+    } else {
+      navigate(`/${hub.slug}`);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <ProfesorLayout>
+        <div className="flex h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </ProfesorLayout>
+    );
+  }
 
   return (
     <ProfesorLayout>
@@ -148,7 +175,10 @@ export default function ProfesorHubs() {
                 </div>
                 <DialogFooter className="pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
-                  <Button type="submit">Crear HUB</Button>
+                  <Button type="submit" disabled={isCreating}>
+                    {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {isCreating ? 'Guardando...' : 'Crear HUB'}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -164,7 +194,6 @@ export default function ProfesorHubs() {
               <CardContent className="p-4">
                 <h3 className="text-lg font-semibold">{hub.name}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{hub.description}</p>
-                <p className="mt-2 text-xs text-muted-foreground">{hub.coursesCount} cursos · {hub.studentsCount} alumnos</p>
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <Button variant="default" size="sm" asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
                     <Link to={`/dashboard/hubs/${hub.id}/cursos`}>Cursos</Link>
@@ -175,8 +204,8 @@ export default function ProfesorHubs() {
                   <Button variant="outline" size="sm" asChild className="w-full">
                     <Link to={`/dashboard/hubs/${hub.id}`}>Editar HUB</Link>
                   </Button>
-                  <Button variant="ghost" size="sm" asChild className="w-full">
-                    <Link to={`/${hub.slug}`}>Ver como alumno</Link>
+                  <Button variant="ghost" size="sm" className="w-full" onClick={() => handleViewAsStudent(hub)}>
+                    Ver como alumno
                   </Button>
                 </div>
               </CardContent>
@@ -184,6 +213,28 @@ export default function ProfesorHubs() {
           ))}
         </div>
       </div>
+
+      <AlertDialog open={emptyHubAlertOpen} onOpenChange={setEmptyHubAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tu HUB está vacío</AlertDialogTitle>
+            <AlertDialogDescription>
+              Aún no tienes contenidos para mostrar a tus alumnos en <b>{selectedEmptyHub?.name}</b>. 
+              Por favor, añade al menos un Curso o un Ebook antes de visualizar tu academia.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Entendido</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setEmptyHubAlertOpen(false);
+              if (selectedEmptyHub) navigate(`/dashboard/hubs/${selectedEmptyHub.id}/cursos`);
+            }}>
+              Añadir contenido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </ProfesorLayout>
   );
 }

@@ -7,26 +7,39 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.includes("admin")) {
-      localStorage.setItem('acroshub_role', 'admin');
-      navigate("/admin");
-    } else if (email.includes("profesor") || email.includes("carlos") || email.includes("maria")) {
-      localStorage.setItem('acroshub_role', 'profesor');
-      navigate("/dashboard");
-    } else {
-      localStorage.setItem('acroshub_role', 'alumno');
-      navigate("/mi-cuenta");
+    setLoading(true);
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message === "Invalid login credentials" ? "Credenciales inválidas" : error.message);
+      return;
     }
+
     toast.success("¡Bienvenido de vuelta!");
+    
+    // Redirigir según el rol guardado en los metadatos de Supabase
+    const role = data.user?.user_metadata?.role;
+    if (role === 'super_admin') navigate("/admin");
+    else if (role === 'profesor') navigate("/dashboard");
+    else navigate("/mi-cuenta");
   };
 
   return (
@@ -54,13 +67,16 @@ export default function LoginPage() {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full">Iniciar sesión</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+            </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             ¿No tienes cuenta? <Link to="/register" className="font-medium text-primary hover:underline">Regístrate</Link>
           </p>
-          <div className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-            <strong>Demo:</strong> Usa "admin@" para admin, "carlos@" para profesor, o cualquier otro email para alumno.
+          <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
+            <strong>Protegido por Supabase:</strong> Las cuentas demo locales ya no funcionan. Debes crear un usuario en el panel de Authentication de tu proyecto.
           </div>
         </CardContent>
       </Card>

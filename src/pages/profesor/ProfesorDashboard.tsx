@@ -1,7 +1,8 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
 import { MetricCard } from "@/components/shared/MetricCard";
-import { getCurrentProfesor, sales, courses, ebooks, getUnrepliedComments, getRelativeTime, hubs } from "@/data/mockData";
-import { Users, DollarSign, BookOpen, Crown, Calendar, AlertCircle, AlertTriangle, CalendarClock, MessageSquare, Check, Circle } from "lucide-react";
+import { useProfesorData } from "@/hooks/useProfesorData";
+import { useAuth } from "@/contexts/AuthContext";
+import { Users, DollarSign, BookOpen, Crown, Calendar, AlertCircle, AlertTriangle, CalendarClock, MessageSquare, Check, Circle, Loader2 } from "lucide-react";
 import { parseISO, differenceInDays, addMonths } from "date-fns";
 import { formatDateProject } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -11,17 +12,25 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 export default function ProfesorDashboard() {
-  const prof = getCurrentProfesor();
-  const profSales = sales.filter(s => s.profesorId === prof.id);
-  const thisMonth = profSales.filter(s => s.date.startsWith('2025-03'));
-  const profCourses = courses.filter(c => c.profesorId === prof.id);
-  const totalStudents = new Set(profSales.map(s => s.alumnoId)).size;
-  const thisMonthAmount = thisMonth.reduce((a, s) => a + s.amount, 0).toFixed(2);
+  const { user } = useAuth();
+  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, isLoading } = useProfesorData();
+
+  const prof = {
+    id: user?.id || '',
+    plan: 'gratis',
+    currentPeriodEnd: null as string | null,
+    scheduledDowngradePlan: null,
+    stripeConnected: false,
+    manualPaymentLink: null,
+  };
+
+  const today = new Date();
+  const thisMonth = profSales.filter(s => new Date(s.created_at).getMonth() === today.getMonth());
+  const totalStudents = new Set(profSales.map(s => s.alumno_id)).size;
+  const thisMonthAmount = "0.00"; 
   const thisMonthCount = thisMonth.length;
   
   // Onboarding Logic
-  const profHubs = hubs.filter(h => h.profesorId === prof.id);
-  const profEbooks = ebooks.filter(e => profHubs.some(h => h.id === e.hubId));
   const hasHub = profHubs.length > 0;
   const hasProduct = profCourses.length > 0 || profEbooks.length > 0;
   const hasPayments = !!(prof.stripeConnected || prof.manualPaymentLink);
@@ -29,27 +38,37 @@ export default function ProfesorDashboard() {
   const progressPercent = Math.round((completedSteps / 3) * 100);
   const isOnboardingComplete = completedSteps === 3;
   
-  const today = new Date();
   const daysUntilRenewal = prof.currentPeriodEnd ? differenceInDays(parseISO(prof.currentPeriodEnd), today) : null;
 
-  // "Alumnos por renovar" (Próximos 7 días asumiendo pago mensual basado en fecha de venta)
   const upcomingStudentRenewals = profSales.map(sale => {
-    const nextCharge = addMonths(parseISO(sale.date), 1);
+    const nextCharge = addMonths(new Date(sale.created_at), 1);
     const diff = differenceInDays(nextCharge, today);
     return { ...sale, nextCharge, daysLeft: diff };
   }).filter(s => s.daysLeft >= 0 && s.daysLeft <= 7)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
-  // "Comentarios sin responder"
-  const unreadComments = getUnrepliedComments(prof.id).slice(0, 5);
+  if (isLoading) {
+    return (
+      <ProfesorLayout>
+        <div className="flex h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </ProfesorLayout>
+    );
+  }
+
+  // "Comentarios sin responder" - placeholder until comments system is built
+  const unreadComments: any[] = [];
+
+  // Helper for relative time display
+  const getRelativeTime = (dateStr: string) => {
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+    if (diff < 60) return `hace ${diff}m`;
+    if (diff < 1440) return `hace ${Math.floor(diff / 60)}h`;
+    return `hace ${Math.floor(diff / 1440)}d`;
+  };
 
   const getCommentLocation = (lessonId: string) => {
-    for (const course of profCourses) {
-      for (const mod of course.modules) {
-        const lesson = mod.lessons.find(l => l.id === lessonId);
-        if (lesson) return { courseTitle: course.title, lessonTitle: lesson.title, courseId: course.id, hubId: course.hubId };
-      }
-    }
     return null;
   };
 
@@ -177,8 +196,12 @@ export default function ProfesorDashboard() {
                     <TableBody>
                       {upcomingStudentRenewals.map(s => (
                         <TableRow key={s.id}>
-                          <TableCell className="font-medium whitespace-nowrap">{s.alumnoName}</TableCell>
-                          <TableCell className="text-muted-foreground">{s.courseTitle}</TableCell>
+                          <TableCell className="font-medium whitespace-nowrap">{s.profiles?.full_name || 'Desconocido'}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {s.product_type === 'course' 
+                              ? profCourses.find(c => c.id === s.product_id)?.title 
+                              : profEbooks.find(e => e.id === s.product_id)?.title}
+                          </TableCell>
                           <TableCell>{formatDateProject(s.nextCharge.toISOString())}</TableCell>
                           <TableCell className="text-right">
                             <Badge variant={s.daysLeft <= 2 ? "destructive" : "secondary"}>
@@ -223,7 +246,7 @@ export default function ProfesorDashboard() {
                     <TableBody>
                       {unreadComments.map(comment => {
                         const loc = getCommentLocation(comment.lessonId);
-                        const hub = hubs.find(h => h.id === loc?.hubId);
+                        const hub = profHubs.find(h => h.id === loc?.hubId);
                         return (
                           <TableRow key={comment.id}>
                             <TableCell className="font-medium">{comment.userName}</TableCell>

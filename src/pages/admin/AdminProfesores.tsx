@@ -4,10 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateProject } from "@/lib/utils";
 
@@ -15,6 +17,25 @@ export default function AdminProfesores() {
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
+
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPlan, setNewPlan] = useState("");
+  const [newNotes, setNewNotes] = useState("");
+
+  const handleAddProfesor = () => {
+    if (!newName || !newEmail || !newPlan) {
+      toast.error("Por favor completa todos los campos obligatorios");
+      return;
+    }
+    toast.success("Profesor agregado correctamente");
+    setIsAddOpen(false);
+    setNewName("");
+    setNewEmail("");
+    setNewPlan("");
+    setNewNotes("");
+  };
 
   const filtered = profesores.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.email.toLowerCase().includes(search.toLowerCase());
@@ -26,7 +47,57 @@ export default function AdminProfesores() {
   return (
     <AdminLayout>
       <div className="space-y-6 animate-fade-in">
-        <h1 className="text-2xl font-bold">Profesores</h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-bold">Profesores</h1>
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto"><UserPlus className="mr-2 h-4 w-4" />Agregar profesor</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Agregar nuevo profesor</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Nombre completo <span className="text-destructive">*</span></Label>
+                  <Input 
+                    placeholder="Ej. Juan Pérez" 
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email <span className="text-destructive">*</span></Label>
+                  <Input 
+                    type="email" 
+                    placeholder="profesor@email.com" 
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Plan inicial <span className="text-destructive">*</span></Label>
+                  <Select value={newPlan} onValueChange={setNewPlan}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar plan" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gratis">Gratis</SelectItem>
+                      <SelectItem value="basico">Básico</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Notas (opcional)</Label>
+                  <Input 
+                    placeholder="Información adicional..." 
+                    value={newNotes}
+                    onChange={(e) => setNewNotes(e.target.value)}
+                  />
+                </div>
+                <Button className="w-full" onClick={handleAddProfesor}>Crear profesor</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_180px_160px]">
           <div className="relative">

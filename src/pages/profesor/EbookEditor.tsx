@@ -1,39 +1,48 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
+import { useProfesorData } from "@/hooks/useProfesorData";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Book, UploadCloud, FileText, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Book, UploadCloud, FileText, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// Since we use mock data, we simulate the ebook object
-const mockEbooks = [
-  { id: "ebook-1", hubId: "hub-1", title: "Guía Definitiva de React", description: "Aprende a crear apps modernas", price: 19.99 }
-];
+
 
 export default function EbookEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const ebook = mockEbooks.find(e => e.id === id) || { id, hubId: "hub-1", title: "Nuevo Ebook", description: "", price: 0 };
+  const queryClient = useQueryClient();
+  const { ebooks, isLoading } = useProfesorData();
+  const ebook = ebooks.find((e: any) => e.id === id);
   
   // Controlled fields to track unsaved changes
-  const [ebookTitle, setEbookTitle] = useState(ebook.title);
-  const [ebookDescription, setEbookDescription] = useState(ebook.description);
+  const [ebookTitle, setEbookTitle] = useState("");
+  const [ebookDescription, setEbookDescription] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<{name: string, size: string}[]>([]);
   
+  useEffect(() => {
+    if (ebook) {
+      setEbookTitle(ebook.title || "");
+      setEbookDescription(ebook.description || "");
+    }
+  }, [ebook]);
+
   // Unsaved changes tracking
   const [isConfirmLeaveOpen, setIsConfirmLeaveOpen] = useState(false);
 
   // Compute Unsaved Changes
   const unsavedChanges = [];
-  if (ebookTitle !== ebook.title) {
+  if (ebook && ebookTitle !== ebook.title) {
     unsavedChanges.push({ field: "Título del Ebook", original: ebook.title, new: ebookTitle });
   }
-  if (ebookDescription !== ebook.description) {
+  if (ebook && ebookDescription !== ebook.description) {
     unsavedChanges.push({ field: "Descripción", original: ebook.description || "(Vacía)", new: ebookDescription || "(Vacía)" });
   }
   if (attachedFiles.length > 0) {
@@ -44,14 +53,33 @@ export default function EbookEditor() {
     if (unsavedChanges.length > 0) {
       setIsConfirmLeaveOpen(true);
     } else {
-      navigate(`/dashboard/hubs/${ebook.hubId}/ebooks`);
+      navigate(`/dashboard/hubs/${ebook?.hub_id}/ebooks`);
     }
+  };
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveEbook = async () => {
+    if (!ebook) return;
+    setIsSaving(true);
+    const { error } = await supabase.from('ebooks').update({
+      title: ebookTitle,
+      description: ebookDescription
+    }).eq('id', ebook.id);
+    setIsSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Contenido del Ebook guardado correctamente");
+    queryClient.invalidateQueries({ queryKey: ['ebooks'] });
+    navigate(`/dashboard/hubs/${ebook.hub_id}/ebooks`);
   };
 
   const simulateUpload = () => {
     toast.success("Archivo subido simulado");
     setAttachedFiles([...attachedFiles, { name: `libro-capitulos-${attachedFiles.length + 1}.pdf`, size: "4.2 MB" }]);
   };
+
+  if (isLoading) return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
+  if (!ebook) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">Ebook no encontrado</p></ProfesorLayout>;
 
   return (
     <ProfesorLayout>
@@ -111,7 +139,7 @@ export default function EbookEditor() {
                             <p className="text-xs text-muted-foreground">{file.size}</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}>
+                        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:bg-destructive hover:text-white" onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -120,10 +148,10 @@ export default function EbookEditor() {
                 )}
               </div>
 
-              <Button className="w-full sm:w-auto" onClick={() => {
-                toast.success("Contenido del Ebook guardado correctamente");
-                navigate(`/dashboard/hubs/${ebook.hubId}/ebooks`);
-              }}>Guardar Ebook</Button>
+              <Button className="w-full sm:w-auto" onClick={handleSaveEbook} disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSaving ? 'Guardando...' : 'Guardar Ebook'}
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -171,15 +199,14 @@ export default function EbookEditor() {
             </div>
           </div>
           <DialogFooter className="sm:justify-between flex flex-col sm:flex-row gap-3 pt-4">
-            <Button variant="destructive" className="w-full sm:w-auto order-3 sm:order-1" onClick={() => navigate(`/dashboard/hubs/${ebook.hubId}/ebooks`)}>
+            <Button variant="destructive" className="w-full sm:w-auto order-3 sm:order-1" onClick={() => navigate(`/dashboard/hubs/${ebook?.hub_id}/ebooks`)}>
               Salir sin guardar
             </Button>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto order-1 sm:order-2">
               <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsConfirmLeaveOpen(false)}>Cancelar</Button>
-              <Button className="w-full sm:w-auto" onClick={() => {
-                toast.success("Todos los cambios fueron guardados exitosamente."); 
-                navigate(`/dashboard/hubs/${ebook.hubId}/ebooks`);
-              }}>Guardar y salir</Button>
+              <Button className="w-full sm:w-auto" onClick={handleSaveEbook} disabled={isSaving}>
+                {isSaving ? 'Guardando...' : 'Guardar y salir'}
+              </Button>
             </div>
           </DialogFooter>
         </DialogContent>

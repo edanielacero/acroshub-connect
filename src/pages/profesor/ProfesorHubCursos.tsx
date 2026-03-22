@@ -1,9 +1,12 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { hubs, courses } from "@/data/mockData";
+import { useProfesorData } from "@/hooks/useProfesorData";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, BookOpen, GripVertical, Plus } from "lucide-react";
+import { ArrowLeft, BookOpen, GripVertical, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -15,10 +18,26 @@ import { Switch } from "@/components/ui/switch";
 export default function ProfesorHubCursos() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const hub = hubs.find(h => h.id === id);
-  const hubCourses = courses.filter(c => c.hubId === id);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { hubs, courses, pricingOptions = [], isLoading } = useProfesorData();
+  
+  const hub = hubs.find((h: any) => h.id === id);
+  const hubCourses = courses.filter((c: any) => c.hub_id === id);
+
+  // Helper: get pricing for a given course
+  const getPricing = (courseId: string) => pricingOptions.filter((p: any) => p.product_id === courseId);
+  const getPriceLabel = (courseId: string) => {
+    const prices = getPricing(courseId);
+    if (prices.length === 0) return 'Sin precio';
+    return prices.map((p: any) => {
+      const label = p.type === 'one-time' ? 'Único' : p.type === 'monthly' ? 'Mensual' : 'Anual';
+      return `$${Number(p.price).toFixed(2)} ${label}`;
+    }).join(' · ');
+  };
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseDesc, setNewCourseDesc] = useState("");
   const [hasLifetime, setHasLifetime] = useState(true);
@@ -28,31 +47,37 @@ export default function ProfesorHubCursos() {
   const [hasAnnual, setHasAnnual] = useState(false);
   const [annualPrice, setAnnualPrice] = useState("");
 
-  const handleCreateCourse = () => {
-    if (!newCourseName.trim()) {
-      toast.error("El nombre del curso es requerido");
-      return;
-    }
-    if (!hasLifetime && !hasMonthly && !hasAnnual) {
-      toast.error("Debes seleccionar al menos un modo de suscripción");
-      return;
-    }
-    if (hasLifetime && (!lifetimePrice || isNaN(Number(lifetimePrice)) || Number(lifetimePrice) < 0)) {
-      toast.error("El precio de pago único es requerido y no puede ser negativo");
-      return;
-    }
-    if (hasMonthly && (!monthlyPrice || isNaN(Number(monthlyPrice)) || Number(monthlyPrice) < 0)) {
-      toast.error("El precio mensual es requerido y no puede ser negativo");
-      return;
-    }
-    if (hasAnnual && (!annualPrice || isNaN(Number(annualPrice)) || Number(annualPrice) < 0)) {
-      toast.error("El precio anual es requerido y no puede ser negativo");
+  const handleCreateCourse = async () => {
+    if (!newCourseName.trim()) { toast.error("El nombre del curso es requerido"); return; }
+    if (!hasLifetime && !hasMonthly && !hasAnnual) { toast.error("Debes seleccionar al menos un modo de suscripción"); return; }
+    
+    setIsCreating(true);
+
+    const { data: newCourse, error } = await supabase.from('courses').insert({
+      hub_id: id,
+      profesor_id: user?.id,
+      title: newCourseName,
+      description: newCourseDesc,
+      is_published: false
+    }).select().single();
+
+    if (error) {
+      toast.error(error.message);
+      setIsCreating(false);
       return;
     }
 
-    // Simulate creation
+    const pricingOptions = [];
+    if (hasLifetime) pricingOptions.push({ product_id: newCourse.id, product_type: 'course', type: 'one-time', price: Number(lifetimePrice)||0, currency: 'USD' });
+    if (hasMonthly) pricingOptions.push({ product_id: newCourse.id, product_type: 'course', type: 'monthly', price: Number(monthlyPrice)||0, currency: 'USD' });
+    if (hasAnnual) pricingOptions.push({ product_id: newCourse.id, product_type: 'course', type: 'annual', price: Number(annualPrice)||0, currency: 'USD' });
+
+    if (pricingOptions.length > 0) await supabase.from('pricing_options').insert(pricingOptions);
+
     toast.success(`Curso "${newCourseName}" creado exitosamente`);
+    queryClient.invalidateQueries({ queryKey: ['courses'] });
     setIsDialogOpen(false);
+    
     setNewCourseName("");
     setNewCourseDesc("");
     setHasLifetime(true);
@@ -61,8 +86,8 @@ export default function ProfesorHubCursos() {
     setMonthlyPrice("");
     setHasAnnual(false);
     setAnnualPrice("");
-    // In a real app we'd get an ID from backend, here we just simulate
-    navigate(`/dashboard/cursos/course-1`); 
+    setIsCreating(false);
+    navigate(`/dashboard/cursos/${newCourse.id}`); 
   };
 
   // --- EDIT COURSE MODAL STATES ---
@@ -81,41 +106,39 @@ export default function ProfesorHubCursos() {
     if (editingCourse) {
       setEditCourseName(editingCourse.title);
       setEditCourseDesc(editingCourse.description || "");
-      setEditHasLifetime(true);
-      setEditLifetimePrice(editingCourse.price?.toString() || "");
-      setEditHasMonthly(false);
-      setEditMonthlyPrice("");
-      setEditHasAnnual(false);
-      setEditAnnualPrice("");
+      const prices = getPricing(editingCourse.id);
+      const oneTime = prices.find((p: any) => p.type === 'one-time');
+      const monthly = prices.find((p: any) => p.type === 'monthly');
+      const annual = prices.find((p: any) => p.type === 'annual');
+      setEditHasLifetime(!!oneTime);
+      setEditLifetimePrice(oneTime ? String(oneTime.price) : "");
+      setEditHasMonthly(!!monthly);
+      setEditMonthlyPrice(monthly ? String(monthly.price) : "");
+      setEditHasAnnual(!!annual);
+      setEditAnnualPrice(annual ? String(annual.price) : "");
     }
   }, [editingCourse]);
 
-  const handleEditCourse = () => {
-    if (!editCourseName.trim()) {
-      toast.error("El nombre del curso es requerido");
-      return;
-    }
-    if (!editHasLifetime && !editHasMonthly && !editHasAnnual) {
-      toast.error("Debes seleccionar al menos un modo de suscripción");
-      return;
-    }
-    if (editHasLifetime && (!editLifetimePrice || isNaN(Number(editLifetimePrice)) || Number(editLifetimePrice) < 0)) {
-      toast.error("El precio de pago único es requerido y no puede ser negativo");
-      return;
-    }
-    if (editHasMonthly && (!editMonthlyPrice || isNaN(Number(editMonthlyPrice)) || Number(editMonthlyPrice) < 0)) {
-      toast.error("El precio mensual es requerido y no puede ser negativo");
-      return;
-    }
-    if (editHasAnnual && (!editAnnualPrice || isNaN(Number(editAnnualPrice)) || Number(editAnnualPrice) < 0)) {
-      toast.error("El precio anual es requerido y no puede ser negativo");
-      return;
-    }
+  const [isEditing, setIsEditing] = useState(false);
+  const handleEditCourse = async () => {
+    if (!editCourseName.trim()) { toast.error("El nombre del curso es requerido"); return; }
+    if (!editHasLifetime && !editHasMonthly && !editHasAnnual) { toast.error("Debes seleccionar al menos un modo de suscripción"); return; }
+    
+    setIsEditing(true);
+    const { error } = await supabase.from('courses').update({
+      title: editCourseName,
+      description: editCourseDesc
+    }).eq('id', editingCourse.id);
+
+    setIsEditing(false);
+    if (error) { toast.error(error.message); return; }
 
     toast.success(`Curso "${editCourseName}" actualizado correctamente`);
+    queryClient.invalidateQueries({ queryKey: ['courses'] });
     setEditingCourse(null);
   };
 
+  if (isLoading) return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
   if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">HUB no encontrado</p></ProfesorLayout>;
 
   return (
@@ -244,7 +267,10 @@ export default function ProfesorHubCursos() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreateCourse}>Continuar</Button>
+                <Button onClick={handleCreateCourse} disabled={isCreating}>
+                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {isCreating ? 'Guardando...' : 'Continuar'}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -268,7 +294,7 @@ export default function ProfesorHubCursos() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-base truncate">{c.title}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{c.modules.length} Módulos · {c.price === 0 ? 'Gratis' : `$${c.price}`}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{getPriceLabel(c.id)}</p>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0 sm:flex-row shrink-0">
@@ -393,7 +419,10 @@ export default function ProfesorHubCursos() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingCourse(null)}>Cancelar</Button>
-            <Button onClick={handleEditCourse}>Guardar Cambios</Button>
+            <Button onClick={handleEditCourse} disabled={isEditing}>
+               {isEditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+               {isEditing ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
