@@ -77,15 +77,7 @@ export default function ProfesorHubs() {
   };
 
   const handleViewAsStudent = (hub: any) => {
-    const hubCourses = courses.filter((c: any) => c.hub_id === hub.id);
-    const hubEbooks = ebooks.filter((e: any) => e.hub_id === hub.id);
-
-    if (hubCourses.length === 0 && hubEbooks.length === 0) {
-      setSelectedEmptyHub(hub);
-      setEmptyHubAlertOpen(true);
-    } else {
-      navigate(`/${hub.slug}`);
-    }
+    navigate(`/${hub.slug}/productos`);
   };
 
   if (isLoading) {

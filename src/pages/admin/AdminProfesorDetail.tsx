@@ -1,5 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { profesores, hubs, courses, sales, platformSubscriptions } from "@/data/mockData";
+import { platformSubscriptions } from "@/data/mockData";
+import { supabase } from "@/lib/supabase";
 import { useParams, Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,8 +28,11 @@ const planLevels: Record<string, number> = { gratis: 0, basico: 1, pro: 2, enter
 
 export default function AdminProfesorDetail() {
   const { id } = useParams();
-  const foundProf = profesores.find(p => p.id === id);
-  const [prof, setProf] = useState(foundProf);
+  const [prof, setProf] = useState<any>(null);
+  const [profHubs, setProfHubs] = useState<any[]>([]);
+  const [profCourses, setProfCourses] = useState<any[]>([]);
+  const [profStudents, setProfStudents] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,8 +48,43 @@ export default function AdminProfesorDetail() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    setProf(foundProf);
-  }, [foundProf]);
+    async function loadProf() {
+      if (!id) return;
+      try {
+        const { data: p } = await supabase.from('profiles').select('*').eq('id', id).single();
+        if (p) {
+          setProf({
+            ...p,
+            name: p.full_name,
+            currentPeriodEnd: p.current_period_end,
+            currentPeriodStart: p.current_period_start,
+            billingCycle: p.billing_cycle,
+            scheduledDowngradePlan: p.scheduled_downgrade_plan,
+            stripeConnected: p.stripe_connected
+          });
+        }
+        
+        const { data: hubsData } = await supabase.from('hubs').select('*').eq('profesor_id', id);
+        if (hubsData) setProfHubs(hubsData);
+        
+        const { data: coursesData } = await supabase.from('courses').select('*').eq('profesor_id', id);
+        if (coursesData) setProfCourses(coursesData);
+        
+        // Simular count de alumnos basado en la respuesta
+        const { data: enrollments } = await supabase.from('enrollments').select('alumno_id');
+        if (enrollments) {
+           // En la vida real haríamos join con productos del profesor
+           setProfStudents(new Set(enrollments.map(e => e.alumno_id)).size);
+        }
+
+      } catch (e) {
+        console.error("Error loading prof details", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProf();
+  }, [id]);
 
   useEffect(() => {
     if (!isModalOpen || !prof) return;
@@ -74,15 +113,10 @@ export default function AdminProfesorDetail() {
     }
   }, [isModalOpen, payType, payPlan, payCycle, prof]);
 
-  if (!prof) return <AdminLayout><p>Profesor no encontrado</p></AdminLayout>;
-
-  const profHubs = hubs.filter(h => h.profesorId === prof.id);
-  const profCourses = courses.filter(c => c.profesorId === prof.id);
-  const profSales = sales.filter(s => s.profesorId === prof.id);
-  const profStudents = new Set(profSales.map(s => s.alumnoId)).size;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const profEbooks: any[] = [];
+  if (!prof && !loading) return <AdminLayout><p>Profesor no encontrado</p></AdminLayout>;
+  if (loading) return <AdminLayout><div className="p-10 text-center animate-pulse">Cargando detalles...</div></AdminLayout>;
   
+  const profEbooks: any[] = [];
   const profSubs = subs.filter(s => s.tenantId === prof.id).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

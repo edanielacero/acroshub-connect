@@ -1,8 +1,11 @@
 import { useParams, Outlet, Link, useLocation } from "react-router-dom";
-import { hubs, getCurrentAlumno } from "@/data/mockData";
+import { getCurrentAlumno } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, LogOut, ArrowLeft } from "lucide-react";
+import { User, LogOut, ArrowLeft, Loader2, Eye } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { usePreview } from "@/components/layout/PreviewProvider";
 
 function hexToHSL(hex: string) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -28,14 +31,32 @@ function hexToHSL(hex: string) {
 export function HubLayout() {
   const { slug } = useParams();
   const location = useLocation();
-  const hub = hubs.find(h => h.slug === slug);
+  
+  const { data: hub, isLoading: isHubLoading } = useQuery({
+    queryKey: ['hub', slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const { data, error } = await supabase.from('hubs').select('*').eq('slug', slug).single();
+      if (error) {
+        if (error.code === 'PGRST116') return null; // Not found
+        throw error;
+      }
+      return data;
+    },
+    enabled: !!slug
+  });
   
   // En escenario real, este estado provendría de contexto de Auth
   const user = getCurrentAlumno();
   const isAuthenticated = true; 
+  const { demoMode, setDemoMode, isOwner } = usePreview();
+
+  if (isHubLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   if (!hub) {
-    return <div className="p-8 text-center text-red-500 font-bold">Academia no encontrada</div>;
+    return <div className="p-8 text-center text-destructive font-bold">Academia no encontrada</div>;
   }
 
   // Lógica jerárquica para el botón de regresar
@@ -53,10 +74,54 @@ export function HubLayout() {
   const navLinkClass = (path: string) => `text-sm font-medium transition-colors hover:text-primary ${location.pathname.endsWith(path) ? 'text-primary' : 'text-muted-foreground'}`;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ 
+    <div className={`min-h-screen flex flex-col transition-all duration-300 ${isOwner ? 'lg:pl-64' : ''}`} style={{ 
       backgroundColor: 'var(--background)',
-      '--primary': hexToHSL(hub.primaryColor)
+      '--primary': hub.primary_color ? hexToHSL(hub.primary_color) : '217 91% 53%'
     } as React.CSSProperties}>
+      
+      {isOwner && (
+        <div className="fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 text-slate-50 flex flex-col z-[100] shadow-2xl">
+          <div className="p-5 border-b border-slate-800 flex items-center gap-3">
+            <Eye className="h-5 w-5 text-emerald-400" />
+            <h2 className="font-semibold text-base">Modo Simulador</h2>
+          </div>
+          
+          <div className="flex-1 p-5 space-y-6 overflow-y-auto">
+            <div className="space-y-3">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Permisos del Alumno</span>
+              <div className="flex flex-col gap-2">
+                <button 
+                  className={`w-full px-4 py-2.5 rounded-md text-sm font-medium text-left transition-colors flex items-center justify-between ${demoMode === 'con-acceso' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                  onClick={() => setDemoMode('con-acceso')}
+                >
+                  Con acceso
+                  {demoMode === 'con-acceso' && <div className="h-2 w-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />}
+                </button>
+                <button 
+                  className={`w-full px-4 py-2.5 rounded-md text-sm font-medium text-left transition-colors flex items-center justify-between ${demoMode === 'sin-acceso' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                  onClick={() => setDemoMode('sin-acceso')}
+                >
+                  Sin acceso
+                  {demoMode === 'sin-acceso' && <div className="h-2 w-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />}
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-slate-800/50 rounded-lg p-3 text-xs text-slate-400 leading-relaxed border border-slate-700/50">
+              Usa este panel para verificar cómo tus alumnos experimentan tu academia dependiendo de los productos que hayan adquirido.
+            </div>
+          </div>
+          
+          <div className="p-5 border-t border-slate-800 bg-slate-900/50">
+            <Button size="sm" variant="outline" className="w-full h-10 bg-transparent border-slate-600 hover:bg-slate-800 hover:text-white hover:border-slate-500" asChild>
+              <Link to={`/dashboard/hubs`}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Salir del simulador
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Header del HUB */}
       <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <div className="container flex h-16 items-center justify-between">
@@ -106,18 +171,20 @@ export function HubLayout() {
       </header>
 
       {/* Barra secundaria de navegación (Jerárquica) */}
-      <div className="bg-muted/30 border-b">
-        <div className="container mx-auto px-4 sm:px-6 h-10 flex items-center">
-          <Link to={backLink} className="text-sm font-medium text-muted-foreground hover:text-primary flex items-center gap-2 transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-            {backText}
-          </Link>
+      {backLink !== '/mi-cuenta' && (
+        <div className="bg-muted/30 border-b">
+          <div className="container mx-auto px-4 sm:px-6 h-10 flex items-center">
+            <Link to={backLink} className="text-sm font-medium text-muted-foreground hover:text-primary flex items-center gap-2 transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+              {backText}
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
 
-      <main className="flex-1 py-8">
-        <Outlet />
-      </main>
+        <main className="flex-1 animate-fade-in relative pt-4">
+          <Outlet context={{ hub }} />
+        </main>
 
       <footer className="border-t py-6 text-center text-sm text-muted-foreground bg-background">
         Powered by Acroshub

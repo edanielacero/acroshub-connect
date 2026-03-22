@@ -6,6 +6,16 @@ export function useProfesorData() {
   const { user } = useAuth();
   const profesorId = user?.id;
 
+  const { data: profile = null, isLoading: loadingProfile } = useQuery({
+    queryKey: ['profile', profesorId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', profesorId!).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profesorId
+  });
+
   const { data: hubs = [], isLoading: loadingHubs } = useQuery({
     queryKey: ['hubs', profesorId],
     queryFn: async () => {
@@ -66,7 +76,7 @@ export function useProfesorData() {
     enabled: productIds.length > 0
   });
 
-  const isLoading = loadingHubs || loadingCourses || loadingEbooks || loadingEnrollments || loadingPricing;
+  const isLoading = loadingProfile || loadingHubs || loadingCourses || loadingEbooks || loadingEnrollments || loadingPricing;
 
-  return { hubs, courses, ebooks, enrollments, pricingOptions, isLoading };
+  return { profile, hubs, courses, ebooks, enrollments, pricingOptions, isLoading };
 }

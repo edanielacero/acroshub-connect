@@ -1,5 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { profesores } from "@/data/mockData";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +15,39 @@ import { toast } from "sonner";
 import { formatDateProject } from "@/lib/utils";
 
 export default function AdminProfesores() {
+  const [profesores, setProfesores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
 
   const [isAddOpen, setIsAddOpen] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const { data: profs } = await supabase.from('profiles').select('*').eq('role', 'profesor');
+        if (profs) {
+          setProfesores(profs.map(p => ({
+            ...p,
+            name: p.full_name,
+            currentPeriodEnd: p.current_period_end,
+            currentPeriodStart: p.current_period_start,
+            billingCycle: p.billing_cycle,
+            scheduledDowngradePlan: p.scheduled_downgrade_plan,
+            createdAt: p.created_at,
+            stripeConnected: p.stripe_connected
+          })));
+        }
+      } catch (error) {
+        console.error("Error fetching profesores:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPlan, setNewPlan] = useState("");
@@ -43,6 +72,8 @@ export default function AdminProfesores() {
     const matchStatus = statusFilter === "todos" || p.status === statusFilter;
     return matchSearch && matchPlan && matchStatus;
   });
+
+  if (loading) return <AdminLayout><div className="p-10 text-center animate-pulse">Cargando profesores...</div></AdminLayout>;
 
   return (
     <AdminLayout>

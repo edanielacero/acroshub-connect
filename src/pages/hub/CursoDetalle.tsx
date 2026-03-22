@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
-import { hubs, courses, getCurrentAlumno, lessonProgress, profesores } from "@/data/mockData";
+import { useParams, Link, Navigate, useOutletContext } from "react-router-dom";
+import { getCurrentAlumno, lessonProgress } from "@/data/mockData";
 import { usePreview } from "@/components/layout/PreviewProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,15 +8,47 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { PlayCircle, Lock, CheckCircle } from "lucide-react";
+import { PlayCircle, Lock, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 export default function CursoDetalle() {
-  const { slug, id } = useParams();
-  const hub = hubs.find(h => h.slug === slug);
-  const course = courses.find(c => c.id === id && c.hubId === hub?.id);
-  const prof = profesores.find(p => p.id === hub?.profesorId);
+  const { hub } = useOutletContext<{ hub: any }>();
+  const { id } = useParams();
   
+  const { data: course, isLoading } = useQuery({
+    queryKey: ['cursoDetalle', id],
+    queryFn: async () => {
+      if (!id || !hub?.id) return null;
+      
+      const { data: cData, error: cErr } = await supabase.from('courses').select('*').eq('id', id).single();
+      if (cErr) throw cErr;
+
+      const { data: mData, error: mErr } = await supabase.from('modules').select('*').eq('course_id', id).order('order_index');
+      if (mErr) throw mErr;
+
+      const { data: lData, error: lErr } = await supabase.from('lessons').select('*').in('module_id', mData.length > 0 ? mData.map(m => m.id) : ['00000000-0000-0000-0000-000000000000']).order('order_index');
+      if (lErr) throw lErr;
+
+      const modulesWithLessons = mData.map(m => ({
+        ...m,
+        lessons: lData.filter(l => l.module_id === m.id)
+      }));
+
+      const { data: pData } = await supabase.from('course_pricing').select('*').eq('course_id', id);
+      const { data: profData } = await supabase.from('profiles').select('*').eq('id', hub.profesor_id).single();
+
+      return {
+        ...cData,
+        modules: modulesWithLessons,
+        pricingOptions: pData || [],
+        prof: profData
+      };
+    },
+    enabled: !!id && !!hub?.id
+  });
+
   const { demoMode, isOwner } = usePreview();
   const alumno = getCurrentAlumno();
   
@@ -26,7 +58,10 @@ export default function CursoDetalle() {
     
   const [opcionSeleccionada, setOpcionSeleccionada] = useState(defaultOption);
 
+  if (isLoading) return <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!hub || !course) return <div className="p-8 text-center">Curso no encontrado</div>;
+
+  const prof = course.prof;
 
   const hasAccess = isOwner ? (demoMode === 'con-acceso') : alumno.purchasedCourses.includes(course.id);
   const modulosCount = course.modules.length;
@@ -63,7 +98,7 @@ export default function CursoDetalle() {
   if (hasAccess) {
     const targetClaseId = ultimaClaseVista?.id || primeraClase?.id;
     if (targetClaseId) {
-      return <Navigate to={`/${slug}/clase/${targetClaseId}`} replace />;
+      return <Navigate to={`/${hub.slug}/clase/${targetClaseId}`} replace />;
     }
     // Fallback por si el curso no tiene clases
     return <div className="p-8 text-center">El curso aún no tiene contenido publicado.</div>;
@@ -101,8 +136,8 @@ export default function CursoDetalle() {
                     <ul className="space-y-2 mt-2">
                       {modulo.lessons.map(clase => (
                         <li key={clase.id} className="flex items-center gap-3 text-sm p-3 rounded-lg bg-background border shadow-sm">
-                          {clase.isFreePreview ? (
-                            <Link to={`/${slug}/clase/${clase.id}`} className="flex items-center gap-3 text-primary font-medium hover:underline flex-1">
+                          {clase.is_free_preview ? (
+                            <Link to={`/${hub.slug}/clase/${clase.id}`} className="flex items-center gap-3 text-primary font-medium hover:underline flex-1">
                               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                 <PlayCircle className="h-4 w-4" />
                               </div>
@@ -161,11 +196,20 @@ export default function CursoDetalle() {
                   <div className={`flex items-start space-x-3 border rounded-xl p-4 cursor-pointer transition-all ${opcionSeleccionada === 'one_time' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50 border-muted-foreground/20'}`} onClick={() => setOpcionSeleccionada('one_time')}>
                     <RadioGroupItem value="one_time" id="one_time" className="mt-1" />
                     <Label htmlFor="one_time" className="flex-1 cursor-pointer">
-                      <div className="font-semibold text-base">Pago único</div>
-                      <div className="text-3xl font-extrabold mt-1 text-primary">${course.price} <span className="text-sm font-normal text-muted-foreground">{course.currency}</span></div>
-                      <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3 text-green-500" /> Acceso de por vida
-                      </div>
+                      {course.pricingOptions.length === 0 ? (
+                        <div className="font-semibold text-base min-h-[4rem] flex flex-col justify-center text-muted-foreground">
+                          Contenido gratuito
+                          <div className="text-3xl font-extrabold mt-1 text-primary">$0</div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="font-semibold text-base">Pago único</div>
+                          <div className="text-3xl font-extrabold mt-1 text-primary">${course.price} <span className="text-sm font-normal text-muted-foreground">{course.currency}</span></div>
+                          <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-500" /> Acceso de por vida
+                          </div>
+                        </>
+                      )}
                     </Label>
                   </div>
                 )}

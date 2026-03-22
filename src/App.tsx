@@ -95,12 +95,16 @@ const App = () => (
             </Route>
 
             {/* Hub public & student (Shared HubLayout) */}
-            <Route path="/:slug" element={<HubLayout />}>
-              <Route index element={<PreviewProvider><HubLanding /></PreviewProvider>} />
-              <Route path="curso/:id" element={<PreviewProvider><CursoDetalle /></PreviewProvider>} />
-              <Route path="ebook/:id" element={<PreviewProvider><EbookDetalle /></PreviewProvider>} />
-              <Route path="productos" element={<PreviewProvider><HubProductos /></PreviewProvider>} />
-              <Route path="clase/:id" element={<PreviewProvider><ClaseReproductor /></PreviewProvider>} />
+            <Route path="/:slug" element={
+              <PreviewProvider>
+                <HubLayout />
+              </PreviewProvider>
+            }>
+              <Route index element={<HubLanding />} />
+              <Route path="curso/:id" element={<CursoDetalle />} />
+              <Route path="ebook/:id" element={<EbookDetalle />} />
+              <Route path="productos" element={<HubProductos />} />
+              <Route path="clase/:id" element={<ClaseReproductor />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

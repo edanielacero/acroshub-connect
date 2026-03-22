@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { profesores, planConfigs } from "@/data/mockData";
+import { planConfigs } from "@/data/mockData";
+import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,15 @@ export default function AdminVentas() {
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [profesores, setProfesores] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadProf() {
+      const { data: profs } = await supabase.from('profiles').select('*').eq('role', 'profesor');
+      if (profs) setProfesores(profs.map(p => ({ ...p, name: p.full_name })));
+    }
+    loadProf();
+  }, []);
 
   const filteredSubs = useMemo(() => {
     return subs.filter(s => {

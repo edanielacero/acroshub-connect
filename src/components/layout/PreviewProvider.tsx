@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useParams } from "react-router-dom";
-import { getCurrentProfesor, hubs } from "@/data/mockData";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 interface PreviewContextType {
   demoMode: 'con-acceso' | 'sin-acceso';
@@ -16,10 +18,19 @@ export const PreviewContext = createContext<PreviewContextType>({
 
 export function PreviewProvider({ children }: { children: ReactNode }) {
   const { slug } = useParams();
-  const role = localStorage.getItem('acroshub_role') || 'alumno'; // defecto alumno
-  const prof = role === 'profesor' ? getCurrentProfesor() : null;
-  const hub = hubs.find(h => h.slug === slug);
-  const isOwner = !!(prof && hub && prof.id === hub.profesorId);
+  const { user } = useAuth();
+  
+  const { data: hub } = useQuery({
+    queryKey: ['hubPreviewCheck', slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const { data } = await supabase.from('hubs').select('profesor_id').eq('slug', slug).single();
+      return data;
+    },
+    enabled: !!slug
+  });
+
+  const isOwner = !!(user && hub && user.id === hub.profesor_id);
 
   const [demoMode, setDemoMode] = useState<'con-acceso' | 'sin-acceso'>(
     () => (sessionStorage.getItem('acroshub_demo_mode') as 'con-acceso' | 'sin-acceso') || 'con-acceso'

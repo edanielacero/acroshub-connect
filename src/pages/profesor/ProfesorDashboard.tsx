@@ -13,15 +13,15 @@ import { Link } from "react-router-dom";
 
 export default function ProfesorDashboard() {
   const { user } = useAuth();
-  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, isLoading } = useProfesorData();
+  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, profile, isLoading } = useProfesorData();
 
   const prof = {
     id: user?.id || '',
-    plan: 'gratis',
-    currentPeriodEnd: null as string | null,
-    scheduledDowngradePlan: null,
-    stripeConnected: false,
-    manualPaymentLink: null,
+    plan: profile?.plan || 'gratis',
+    currentPeriodEnd: profile?.current_period_end || null as string | null,
+    scheduledDowngradePlan: profile?.scheduled_downgrade_plan || null,
+    stripeConnected: profile?.stripe_connected || false,
+    manualPaymentLink: profile?.manual_payment_link || null,
   };
 
   const today = new Date();

@@ -1,6 +1,7 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { MetricCard } from "@/components/shared/MetricCard";
-import { profesores, alumnos } from "@/data/mockData";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { Users, UserCheck, GraduationCap, AlertTriangle, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,43 @@ const planPrices = {
 };
 
 export default function AdminDashboard() {
+  const [profesores, setProfesores] = useState<any[]>([]);
+  const [alumnos, setAlumnos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const { data: profs } = await supabase.from('profiles').select('*').eq('role', 'profesor');
+        const { data: alums } = await supabase.from('profiles').select('*').eq('role', 'alumno');
+        
+        if (profs) {
+          setProfesores(profs.map(p => ({
+            ...p,
+            name: p.full_name,
+            currentPeriodEnd: p.current_period_end,
+            currentPeriodStart: p.current_period_start,
+            billingCycle: p.billing_cycle,
+            scheduledDowngradePlan: p.scheduled_downgrade_plan,
+            createdAt: p.created_at,
+            stripeConnected: p.stripe_connected
+          })));
+        }
+        
+        if (alums) {
+          setAlumnos(alums);
+        }
+      } catch (error) {
+        console.error("Error fetching admin data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  if (loading) return <AdminLayout><div className="p-10 text-center animate-pulse">Cargando datos del dashboard...</div></AdminLayout>;
+
   const activeProfs = profesores.filter(p => p.status === 'activo');
 
   const today = new Date();
