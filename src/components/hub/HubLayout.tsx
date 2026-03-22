@@ -81,7 +81,13 @@ export function HubLayout() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link to="/mi-cuenta">Todos mis cursos</Link>
+                    <Link to="/mi-cuenta">Mi cuenta</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/mis-ajustes">Mis ajustes</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/mis-pagos">Facturación</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>

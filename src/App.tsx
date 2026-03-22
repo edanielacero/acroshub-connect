@@ -37,6 +37,8 @@ import ClaseReproductor from "./pages/hub/ClaseReproductor";
 import { PreviewProvider } from "./components/layout/PreviewProvider";
 
 import AlumnoDashboard from "./pages/alumno/AlumnoDashboard";
+import AlumnoAjustes from "./pages/alumno/AlumnoAjustes";
+import AlumnoPagos from "./pages/alumno/AlumnoPagos";
 import { AlumnoLayout } from "./components/alumno/AlumnoLayout";
 import { HubLayout } from "./components/hub/HubLayout";
 
@@ -79,6 +81,8 @@ const App = () => (
           {/* Alumno */}
           <Route element={<AlumnoLayout />}>
             <Route path="/mi-cuenta" element={<AlumnoDashboard />} />
+            <Route path="/mis-ajustes" element={<AlumnoAjustes />} />
+            <Route path="/mis-pagos" element={<AlumnoPagos />} />
           </Route>
 
           {/* Hub public & student (Shared HubLayout) */}

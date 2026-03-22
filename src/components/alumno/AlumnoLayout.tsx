@@ -27,6 +27,12 @@ export function AlumnoLayout() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => navigate('/mis-ajustes')}>
+                Mis Ajustes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/mis-pagos')}>
+                Facturación
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/')}>
                 <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
               </DropdownMenuItem>

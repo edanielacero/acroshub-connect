@@ -34,12 +34,24 @@ export interface AlumnoNotification {
   profesorId?: string;
 }
 
+export interface AlumnoSubscription {
+  id: string;
+  productId: string;
+  hubId: string;
+  type: 'mensual' | 'anual';
+  amount: number;
+  currency: string;
+  nextBilling: string;
+  status: 'activa' | 'cancelada' | 'vencida';
+}
+
 export interface Alumno extends User {
   role: 'alumno';
   purchasedCourses: string[];
   purchasedEbooks: string[];
   completedLessons: string[];
   notifications?: AlumnoNotification[];
+  activeSubscriptions?: AlumnoSubscription[];
 }
 
 export interface Hub {
@@ -184,10 +196,13 @@ export const profesores: Profesor[] = [
 export const alumnos: Alumno[] = [
   { 
     id: 'alu-1', name: 'Ana López', email: 'ana@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-01', 
-    purchasedCourses: ['course-1', 'course-3'], purchasedEbooks: ['ebook-1'], completedLessons: ['lesson-1-1', 'lesson-1-2'],
+    purchasedCourses: ['course-1', 'course-2', 'course-3'], purchasedEbooks: ['ebook-1'], completedLessons: ['lesson-1-1', 'lesson-1-2'],
     notifications: [
       { id: 'notif-1', type: 'warning', message: 'Tu suscripción a Trading Academy vence en 5 días. Renuévala para no perder acceso a tus cursos.', actionText: 'Renovar ahora', actionUrl: '/trading-academy', isRead: false, createdAt: '2025-03-20T10:00:00Z', requiresPayment: true, profesorId: 'prof-1' },
       { id: 'notif-2', type: 'error', message: 'El curso "Trading desde Cero" será descontinuado y eliminado el 15 de abril.', isRead: false, createdAt: '2025-03-18T10:00:00Z' }
+    ],
+    activeSubscriptions: [
+      { id: 'sub-1', productId: 'course-2', hubId: 'hub-1', type: 'mensual', amount: 39, currency: 'USD', nextBilling: '2026-04-15', status: 'activa' }
     ]
   },
   { id: 'alu-2', name: 'Pedro Sánchez', email: 'pedro@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-15', purchasedCourses: ['course-1'], purchasedEbooks: [], completedLessons: ['lesson-1-1'] },
