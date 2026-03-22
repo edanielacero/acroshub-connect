@@ -59,7 +59,7 @@ export default function ProfesorDashboard() {
           </div>
         )}
         
-        {prof.plan !== 'freemium' && daysUntilRenewal !== null && daysUntilRenewal >= 0 && daysUntilRenewal <= 7 && (
+        {prof.plan !== 'gratis' && daysUntilRenewal !== null && daysUntilRenewal >= 0 && daysUntilRenewal <= 7 && (
           <div className="flex items-start gap-3 p-4 border border-orange-200 bg-orange-50 text-orange-800 rounded-lg">
             <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0 text-orange-600" />
             <div>

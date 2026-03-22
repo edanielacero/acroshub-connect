@@ -53,7 +53,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <div className="flex-1 min-w-0" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 px-2 sm:px-3">
+              <Button variant="ghost" className="gap-2 px-2 sm:px-3 hover:bg-transparent hover:text-foreground">
                 <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">D</div>
                 <span className="hidden sm:inline">Daniel</span>
                 <ChevronDown className="h-4 w-4" />

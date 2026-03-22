@@ -37,7 +37,7 @@ export default function AdminProfesores() {
             <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los planes</SelectItem>
-              <SelectItem value="freemium">Freemium</SelectItem>
+              <SelectItem value="gratis">Gratis</SelectItem>
               <SelectItem value="basico">Básico</SelectItem>
               <SelectItem value="pro">Pro</SelectItem>
               <SelectItem value="enterprise">Enterprise</SelectItem>

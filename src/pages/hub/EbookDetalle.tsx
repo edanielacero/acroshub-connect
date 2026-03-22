@@ -31,6 +31,7 @@ export default function EbookDetalle() {
   const hasAccess = isOwner ? (demoMode === 'con-acceso') : purchasedEbookIds.includes(ebook.id);
 
   const isManualPayment = !prof?.stripeConnected && !!prof?.manualPaymentLink;
+  const isUnavailable = !prof?.stripeConnected && !prof?.manualPaymentLink;
 
   const handleComprar = () => {
     if (isManualPayment && prof?.manualPaymentLink) {
@@ -130,18 +131,26 @@ export default function EbookDetalle() {
                 )}
               </RadioGroup>
               
-              <Button className="w-full mt-6 h-12 text-base font-bold shadow-md" size="lg" onClick={handleComprar}>
-                {isManualPayment ? 'Contactar para comprar' : 'Comprar ahora'}
-              </Button>
-              
-              <div className="mt-4 pt-4 border-t text-center space-y-2">
-                <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-                  <Lock className="h-3 w-3" /> {isManualPayment ? 'Pago acordado directo con experto' : 'Pago seguro con Stripe'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {isManualPayment ? 'El acceso se brindará manualmente' : 'Entrega inmediata garantizada'}
-                </p>
-              </div>
+              {isUnavailable ? (
+                <div className="mt-8 p-4 bg-muted/50 rounded-xl text-center border border-muted-foreground/10">
+                  <p className="font-semibold text-muted-foreground">Contactar al Profesor para Comprar</p>
+                </div>
+              ) : (
+                <>
+                  <Button className="w-full mt-6 h-12 text-base font-bold shadow-md" size="lg" onClick={handleComprar}>
+                    {isManualPayment ? 'Contactar para comprar' : 'Comprar ahora'}
+                  </Button>
+                  
+                  <div className="mt-4 pt-4 border-t text-center space-y-2">
+                    <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+                      <Lock className="h-3 w-3" /> {isManualPayment ? 'Pago acordado directo con experto' : 'Pago seguro con Stripe'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isManualPayment ? 'El acceso se brindará manualmente' : 'Entrega inmediata garantizada'}
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

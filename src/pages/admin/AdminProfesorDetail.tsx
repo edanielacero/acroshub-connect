@@ -17,13 +17,13 @@ import { toast } from "sonner";
 import { formatDateProject } from "@/lib/utils";
 
 const planPrices = {
-  freemium: { mensual: 0, anual: 0 },
+  gratis: { mensual: 0, anual: 0 },
   basico: { mensual: 30, anual: 300 },
   pro: { mensual: 50, anual: 500 },
   enterprise: { mensual: 100, anual: 1000 }
 };
 
-const planLevels: Record<string, number> = { freemium: 0, basico: 1, pro: 2, enterprise: 3 };
+const planLevels: Record<string, number> = { gratis: 0, basico: 1, pro: 2, enterprise: 3 };
 
 export default function AdminProfesorDetail() {
   const { id } = useParams();
@@ -64,7 +64,7 @@ export default function AdminProfesorDetail() {
 
     if (payPlan && payCycle) {
       const target = planPrices[payPlan as keyof typeof planPrices]?.[payCycle] || 0;
-      const current = (prof.plan !== 'freemium' && prof.billingCycle) ? planPrices[prof.plan as keyof typeof planPrices]?.[prof.billingCycle] || 0 : 0;
+      const current = (prof.plan !== 'gratis' && prof.billingCycle) ? planPrices[prof.plan as keyof typeof planPrices]?.[prof.billingCycle] || 0 : 0;
       
       if (payType === 'first_payment' || payType === 'renewal') {
         setPayAmount(target);
@@ -127,7 +127,7 @@ export default function AdminProfesorDetail() {
 
     setProf(prev => prev ? { 
       ...prev, 
-      plan: payPlan as 'freemium'|'basico'|'pro'|'enterprise',
+      plan: payPlan as 'gratis'|'basico'|'pro'|'enterprise',
       billingCycle: payCycle,
       currentPeriodStart: payType === 'renewal' ? prev.currentPeriodStart : cDate.toISOString().split('T')[0],
       currentPeriodEnd: nextDate.toISOString().split('T')[0],
@@ -181,7 +181,7 @@ export default function AdminProfesorDetail() {
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Estado</p>
               <div>
-                <Badge className={`capitalize text-white ${prof.status === 'activo' ? 'bg-success hover:bg-success/80' : prof.status === 'freemium' ? 'bg-primary hover:bg-primary/80' : 'bg-destructive hover:bg-destructive/80'}`}>
+                <Badge className={`capitalize text-white ${prof.status === 'activo' ? 'bg-success hover:bg-success/80' : prof.status === 'gratis' ? 'bg-primary hover:bg-primary/80' : 'bg-destructive hover:bg-destructive/80'}`}>
                   {prof.status}
                 </Badge>
               </div>
@@ -438,7 +438,7 @@ export default function AdminProfesorDetail() {
                 </div>
                 <Button 
                   variant={prof.status === 'suspendido' ? 'outline' : 'destructive'} 
-                  onClick={() => updateProf('status', prof.status === 'suspendido' ? (prof.plan === 'freemium' ? 'freemium' : 'activo') : 'suspendido')}
+                  onClick={() => updateProf('status', prof.status === 'suspendido' ? (prof.plan === 'gratis' ? 'gratis' : 'activo') : 'suspendido')}
                   className="w-full sm:w-auto"
                 >
                   {prof.status === 'suspendido' ? 'Quitar Suspensión' : 'Suspender Profesor'}

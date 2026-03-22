@@ -10,8 +10,8 @@ export interface User {
 
 export interface Profesor extends User {
   role: 'profesor';
-  plan: 'freemium' | 'basico' | 'pro' | 'enterprise';
-  status: 'activo' | 'freemium' | 'suspendido';
+  plan: 'gratis' | 'basico' | 'pro' | 'enterprise';
+  status: 'activo' | 'gratis' | 'suspendido';
   billingCycle: 'mensual' | 'anual' | null;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
@@ -22,11 +22,24 @@ export interface Profesor extends User {
   manualPaymentLink?: string;
 }
 
+export interface AlumnoNotification {
+  id: string;
+  type: 'warning' | 'error' | 'info';
+  message: string;
+  actionText?: string;
+  actionUrl?: string;
+  isRead: boolean;
+  createdAt: string;
+  requiresPayment?: boolean;
+  profesorId?: string;
+}
+
 export interface Alumno extends User {
   role: 'alumno';
   purchasedCourses: string[];
   purchasedEbooks: string[];
   completedLessons: string[];
+  notifications?: AlumnoNotification[];
 }
 
 export interface Hub {
@@ -144,7 +157,7 @@ export interface PlanConfig {
 // ===== MOCK DATA =====
 
 export const planConfigs: PlanConfig[] = [
-  { name: 'Freemium', key: 'freemium', maxHubs: 1, maxStudents: 50, maxCourses: 3, maxLessonsPerCourse: 10, maxEbooks: 1, price: 0, priceAnnual: 0 },
+  { name: 'Gratis', key: 'gratis', maxHubs: 1, maxStudents: 50, maxCourses: 3, maxLessonsPerCourse: 10, maxEbooks: 1, price: 0, priceAnnual: 0 },
   { name: 'Básico', key: 'basico', maxHubs: 2, maxStudents: 200, maxCourses: 10, maxLessonsPerCourse: 30, maxEbooks: 5, price: 29, priceAnnual: 290 },
   { name: 'Pro', key: 'pro', maxHubs: 5, maxStudents: 1000, maxCourses: 50, maxLessonsPerCourse: 100, maxEbooks: 20, price: 99, priceAnnual: 990 },
   { name: 'Enterprise', key: 'enterprise', maxHubs: -1, maxStudents: -1, maxCourses: -1, maxLessonsPerCourse: -1, maxEbooks: -1, price: 299, priceAnnual: 2990 },
@@ -158,18 +171,25 @@ export const profesores: Profesor[] = [
   },
   {
     id: 'prof-2', name: 'María García', email: 'maria@marketing.com', role: 'profesor',
-    plan: 'basico', status: 'activo', billingCycle: 'mensual', currentPeriodStart: '2025-02-15', currentPeriodEnd: '2025-03-15', scheduledDowngradePlan: 'freemium', stripeConnected: true, stripeEmail: 'maria@stripe.com',
+    plan: 'basico', status: 'activo', billingCycle: 'mensual', currentPeriodStart: '2025-02-15', currentPeriodEnd: '2025-03-15', scheduledDowngradePlan: 'gratis', stripeConnected: true, stripeEmail: 'maria@stripe.com',
     emergencyEmail: 'maria.emergencia@gmail.com', avatar: '', createdAt: '2024-09-20',
   },
   {
     id: 'prof-3', name: 'Jorge Ramírez', email: 'jorge@fitness.com', role: 'profesor',
-    plan: 'freemium', status: 'suspendido', billingCycle: null, currentPeriodStart: null, currentPeriodEnd: null, scheduledDowngradePlan: null, stripeConnected: false,
+    plan: 'gratis', status: 'suspendido', billingCycle: null, currentPeriodStart: null, currentPeriodEnd: null, scheduledDowngradePlan: null, stripeConnected: false,
     avatar: '', createdAt: '2025-01-10',
   },
 ];
 
 export const alumnos: Alumno[] = [
-  { id: 'alu-1', name: 'Ana López', email: 'ana@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-01', purchasedCourses: ['course-1', 'course-3'], purchasedEbooks: ['ebook-1'], completedLessons: ['lesson-1-1', 'lesson-1-2'] },
+  { 
+    id: 'alu-1', name: 'Ana López', email: 'ana@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-01', 
+    purchasedCourses: ['course-1', 'course-3'], purchasedEbooks: ['ebook-1'], completedLessons: ['lesson-1-1', 'lesson-1-2'],
+    notifications: [
+      { id: 'notif-1', type: 'warning', message: 'Tu suscripción a Trading Academy vence en 5 días. Renuévala para no perder acceso a tus cursos.', actionText: 'Renovar ahora', actionUrl: '/trading-academy', isRead: false, createdAt: '2025-03-20T10:00:00Z', requiresPayment: true, profesorId: 'prof-1' },
+      { id: 'notif-2', type: 'error', message: 'El curso "Trading desde Cero" será descontinuado y eliminado el 15 de abril.', isRead: false, createdAt: '2025-03-18T10:00:00Z' }
+    ]
+  },
   { id: 'alu-2', name: 'Pedro Sánchez', email: 'pedro@mail.com', role: 'alumno', avatar: '', createdAt: '2024-10-15', purchasedCourses: ['course-1'], purchasedEbooks: [], completedLessons: ['lesson-1-1'] },
   { id: 'alu-3', name: 'Laura Martínez', email: 'laura@mail.com', role: 'alumno', avatar: '', createdAt: '2024-11-01', purchasedCourses: ['course-2', 'course-4'], purchasedEbooks: ['ebook-2'], completedLessons: [] },
   { id: 'alu-4', name: 'Diego Torres', email: 'diego@mail.com', role: 'alumno', avatar: '', createdAt: '2024-11-20', purchasedCourses: ['course-1', 'course-2'], purchasedEbooks: [], completedLessons: ['lesson-1-1', 'lesson-1-2', 'lesson-1-3'] },

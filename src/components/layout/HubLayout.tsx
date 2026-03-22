@@ -79,7 +79,7 @@ export function HubLayout({ children, hubName, slug }: HubLayoutProps) {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2 shrink-0">
+                  <Button variant="ghost" size="sm" className="gap-2 shrink-0 hover:bg-transparent hover:text-foreground">
                     <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-medium">
                       {alumno.name.charAt(0)}
                     </div>

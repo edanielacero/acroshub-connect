@@ -11,7 +11,7 @@ import { parseISO, differenceInDays } from "date-fns";
 import { formatDateProject } from "@/lib/utils";
 
 const planPrices = {
-  freemium: { mensual: 0, anual: 0 },
+  gratis: { mensual: 0, anual: 0 },
   basico: { mensual: 30, anual: 300 },
   pro: { mensual: 50, anual: 500 },
   enterprise: { mensual: 100, anual: 1000 }
@@ -24,7 +24,7 @@ export default function AdminDashboard() {
 
   // 1. Renovación próxima (0 a 7 días)
   const upcomingRenewals = profesores.filter(p => {
-    if (p.plan === 'freemium' || !p.currentPeriodEnd || p.status !== 'activo') return false;
+    if (p.plan === 'gratis' || !p.currentPeriodEnd || p.status !== 'activo') return false;
     const endDate = parseISO(p.currentPeriodEnd);
     const diff = differenceInDays(endDate, today);
     return diff >= 0 && diff <= 7;
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
 
   // 2. Estado de gracia (1 a 5 días tarde, aún "activos" en bd hasta suspensión)
   const inGracePeriod = profesores.filter(p => {
-    if (p.plan === 'freemium' || !p.currentPeriodEnd || p.status !== 'activo') return false;
+    if (p.plan === 'gratis' || !p.currentPeriodEnd || p.status !== 'activo') return false;
     const endDate = parseISO(p.currentPeriodEnd);
     const diff = differenceInDays(today, endDate);
     return diff > 0 && diff <= 5;
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getAmountOwed = (prof: any) => {
-    if (!prof.plan || !prof.billingCycle || prof.plan === 'freemium') return 0;
+    if (!prof.plan || !prof.billingCycle || prof.plan === 'gratis') return 0;
     return planPrices[prof.plan as keyof typeof planPrices]?.[prof.billingCycle as 'mensual' | 'anual'] || 0;
   };
 
