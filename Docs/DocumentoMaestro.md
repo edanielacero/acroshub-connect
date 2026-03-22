@@ -676,7 +676,7 @@ Profesor → paga suscripción → Daniel (manual inicialmente)
 
 ### 6.1 Estado Actual
 
-El prototipo visual está completo en React + Vite con shadcn/ui. Las páginas y componentes UI están creados. Falta conectar el backend (Supabase).
+El prototipo visual de toda la plataforma (fase UI) está 100% completo, estabilizado y testeado en los flujos de roles Super Admin, Profesor y Alumno usando React + Vite con shadcn/ui. Las vistas incluyen lógica compleja simulada de estado como theaming de colores inyectado dinámicamente por Hub, catálogo híbrido de cursos/ebooks, jerarquía de navegación y flujos condicionales de compra interactivos. El siguiente paso bloqueante es iniciar el Backend Core (Supabase).
 
 ### 6.2 Lo que YA existe (Frontend)
 
@@ -690,6 +690,11 @@ El prototipo visual está completo en React + Vite con shadcn/ui. Las páginas y
 - ✅ Sistema de comentarios UI
 - ✅ Sistema de quizzes UI
 - ✅ Navegación entre roles
+- ✅ Integración unificada de E-Books y Cursos en catálogos
+- ✅ Vistas de Ventas dinámicas (Stripe/Manual/Bloqueo Condicional)
+- ✅ Theming dinámico por Hub (colores personalizados inyectados como HSL)
+- ✅ Notificaciones y Alertas In-App para Suscripciones
+- ✅ Navegación jerárquica con barra de retroceso contextual
 
 ### 6.3 Lo que FALTA implementar (Backend)
 
