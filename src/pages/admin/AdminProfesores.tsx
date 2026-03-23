@@ -1,5 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect } from "react";
+import { planConfigs } from "@/data/mockData";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,10 +110,11 @@ export default function AdminProfesores() {
                   <Select value={newPlan} onValueChange={setNewPlan}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar plan" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gratis">Gratis</SelectItem>
-                      <SelectItem value="basico">Básico</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                      {planConfigs.map(plan => (
+                        <SelectItem key={plan.key} value={plan.key}>
+                          {plan.name} {plan.price > 0 ? `— $${plan.price}/mes` : '— Gratis'}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

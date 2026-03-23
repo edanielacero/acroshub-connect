@@ -195,12 +195,12 @@ serve(async (req: Request) => {
           body: JSON.stringify({
             from: "Acroshub <onboarding@resend.dev>",
             to: [email.trim()],
-            subject: `¡Bienvenido! Activa tu cuenta para acceder a ${productTitle || "tu curso"}`,
+            subject: productId ? `¡Bienvenido! Activa tu cuenta para acceder a ${productTitle || "tu curso"}` : `¡Bienvenido! Activa tu cuenta en la plataforma`,
             html: `
               <h1>¡Hola ${name}!</h1>
-              <p>${profesorName || "Tu profesor"} te ha invitado a <strong>${productTitle || "un curso"}</strong>.</p>
-              <p>Para acceder, activa tu cuenta haciendo clic aquí:</p>
-              <a href="${activationLink}" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Activar mi cuenta</a>
+              <p>${profesorName || "Tu administrador"} te ha invitado a ${productId ? `<strong>${productTitle || "un curso"}</strong>` : `<strong>unirte a la plataforma</strong>`}.</p>
+              <p>Para completar tu registro, activa tu cuenta haciendo clic aquí:</p>
+              <a href="${activationLink}" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">${productId ? 'Acceder a mi contenido' : 'Activar mi cuenta'}</a>
               <br/><br/>
               <p style="color:#888;font-size:12px;">Si no puedes hacer clic, copia y pega este enlace: ${activationLink}</p>
             `,
