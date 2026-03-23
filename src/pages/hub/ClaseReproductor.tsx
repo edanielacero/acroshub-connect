@@ -123,24 +123,53 @@ export default function ClaseReproductor() {
     }
   };
 
+  const isDirectVideo = clase.video_url?.match(/\.(mp4|webm|ogg)$/i) || clase.video_url?.includes('supabase.co/storage/v1/object/public/');
+
+  const getEmbedUrl = (url: string) => {
+    if (!url) return '';
+    if (url.includes('youtube.com/watch?v=')) {
+      const videoId = url.split('v=')[1].split('&')[0];
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    if (url.includes('youtu.be/')) {
+      const videoId = url.split('youtu.be/')[1].split('?')[0];
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    if (url.includes('vimeo.com/')) {
+      const videoId = url.split('vimeo.com/')[1].split('?')[0];
+      return `https://player.vimeo.com/video/${videoId}`;
+    }
+    return url;
+  };
+
   return (
     <div className="animate-fade-in grid gap-8 lg:grid-cols-4 max-w-[1400px] mx-auto px-4 sm:px-6">
       {/* Video y contenido principal */}
       <main className="lg:col-span-3 space-y-8">
         {/* Video Player */}
-        <div className="aspect-video bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-1 ring-border relative">
+        <div className="aspect-video bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-1 ring-border relative group">
           {clase.video_url ? (
-            <iframe 
-              src={clase.video_url.replace('watch?v=', 'embed/')} 
-              className="w-full h-full border-0 absolute inset-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+            isDirectVideo ? (
+              <video 
+                src={clase.video_url} 
+                className="w-full h-full absolute inset-0 outline-none"
+                controls
+                controlsList="nodownload"
+                poster={`https://placehold.co/1280x720/1f2937/ffffff?text=${encodeURIComponent(clase.title)}`}
+              />
+            ) : (
+              <iframe 
+                src={getEmbedUrl(clase.video_url)} 
+                className="w-full h-full border-0 absolute inset-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white/50 bg-slate-900 flex-col gap-4">
-               <PlayCircle className="h-16 w-16 opacity-30" />
-               <p>Reproductor de video seguro preparado</p>
-               <span className="text-xs bg-white/10 px-3 py-1 rounded-full">{clase.videoType === 'youtube' ? 'YouTube' : 'Contenido Nativo'}</span>
+               <PlayCircle className="h-16 w-16 opacity-30 group-hover:scale-110 transition-transform duration-500" />
+               <p className="font-medium">Video no disponible o en procesamiento</p>
+               <span className="text-xs bg-white/10 px-3 py-1 rounded-full">{modulo.title}</span>
             </div>
           )}
         </div>
