@@ -68,7 +68,7 @@ export default function ProfesorHubs() {
       return;
     }
     
-    toast.success("HUB creado exitosamente");
+    toast.success("Academia creada exitosamente");
     queryClient.invalidateQueries({ queryKey: ['hubs'] });
     setIsCreateOpen(false);
     setNewHubName("");
@@ -94,21 +94,21 @@ export default function ProfesorHubs() {
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold">Mis HUBs</h1>
+          <h1 className="text-2xl font-bold">Mis Academias</h1>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Crear HUB</Button>
+              <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Crear Academia</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Crear nuevo HUB</DialogTitle>
+                <DialogTitle>Crear nueva Academia</DialogTitle>
                 <DialogDescription>
                   Define la información básica de tu próxima academia en línea.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateHub} className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="hub-name">Nombre del HUB</Label>
+                  <Label htmlFor="hub-name">Nombre de la Academia</Label>
                   <Input 
                     id="hub-name" 
                     placeholder="Ej. Academia de Trading PRO" 
@@ -169,7 +169,7 @@ export default function ProfesorHubs() {
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
                   <Button type="submit" disabled={isCreating}>
                     {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {isCreating ? 'Guardando...' : 'Crear HUB'}
+                    {isCreating ? 'Guardando...' : 'Crear Academia'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -194,7 +194,7 @@ export default function ProfesorHubs() {
                     <Link to={`/dashboard/hubs/${hub.id}/ebooks`}>Ebooks</Link>
                   </Button>
                   <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link to={`/dashboard/hubs/${hub.id}`}>Editar HUB</Link>
+                    <Link to={`/dashboard/hubs/${hub.id}`}>Editar Academia</Link>
                   </Button>
                   <Button variant="ghost" size="sm" className="w-full" onClick={() => handleViewAsStudent(hub)}>
                     Ver como alumno
@@ -209,7 +209,7 @@ export default function ProfesorHubs() {
       <AlertDialog open={emptyHubAlertOpen} onOpenChange={setEmptyHubAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tu HUB está vacío</AlertDialogTitle>
+            <AlertDialogTitle>Tu Academia está vacía</AlertDialogTitle>
             <AlertDialogDescription>
               Aún no tienes contenidos para mostrar a tus alumnos en <b>{selectedEmptyHub?.name}</b>. 
               Por favor, añade al menos un Curso o un Ebook antes de visualizar tu academia.

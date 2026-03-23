@@ -84,7 +84,7 @@ export default function HubMisProductos() {
           <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
             <ShoppingBag className="h-10 w-10 text-muted-foreground/50" />
           </div>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight">No tienes productos en este HUB</h2>
+          <h2 className="mt-4 text-2xl font-bold tracking-tight">No tienes productos en esta Academia</h2>
           <p className="text-muted-foreground mt-2 max-w-md mx-auto">
             Explora el catálogo de {hub.name} y adquiere tu primer curso para comenzar tu camino.
           </p>

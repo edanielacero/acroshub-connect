@@ -38,8 +38,10 @@ export function useInviteStudent() {
       productTitle: string;
       profesorName: string;
       accessType: 'lifetime' | 'subscription';
+      amount?: number;
+      currency?: string;
     }) => {
-      const { email, name, productId, productType, productTitle, profesorName, accessType } = input;
+      const { email, name, productId, productType, productTitle, profesorName, accessType, amount, currency } = input;
       const appUrl = window.location.origin;
 
       try {
@@ -53,18 +55,20 @@ export function useInviteStudent() {
             profesorName,
             accessType,
             appUrl,
+            amount,
+            currency
           },
         });
         
-        // When Edge Function returns non-2xx, the real error is in fnErr.context
         if (fnErr) {
-          let realMessage = 'Error al invocar la función';
+          console.error("Detalle del error de Edge Function:", fnErr);
+          let realMessage = `Error de servidor (${fnErr.message})`;
           try {
-            // fnErr.context is the Response object — try to parse JSON from it
-            const errBody = await fnErr.context?.json?.();
-            realMessage = errBody?.error || fnErr.message || realMessage;
-          } catch { 
-            realMessage = fnErr.message || realMessage;
+            const errBody = await (fnErr as any).context?.json?.();
+            console.error("Cuerpo del error:", errBody);
+            realMessage = errBody?.error || errBody?.message || realMessage;
+          } catch (e) { 
+            console.error("No se pudo parsear el error JSON:", e);
           }
           throw new Error(realMessage);
         }

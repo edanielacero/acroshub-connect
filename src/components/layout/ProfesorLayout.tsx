@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const profLinks = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/dashboard/hubs", label: "Mis HUBs", icon: FolderOpen },
+  { to: "/dashboard/hubs", label: "Mis Academias", icon: FolderOpen },
   { to: "/dashboard/alumnos", label: "Alumnos", icon: Users },
   { to: "/dashboard/ventas", label: "Ventas", icon: BarChart3 },
   { to: "/dashboard/configuracion", label: "Configuración", icon: Settings },

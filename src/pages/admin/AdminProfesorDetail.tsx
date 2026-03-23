@@ -390,7 +390,7 @@ export default function AdminProfesorDetail() {
 
         {/* Metricas de contenido */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard title="HUBs creados" value={profHubs.length} icon={<FolderOpen className="h-6 w-6" />} />
+          <MetricCard title="Academias creadas" value={profHubs.length} icon={<FolderOpen className="h-6 w-6" />} />
           <MetricCard title="Cursos" value={profCourses.length} icon={<BookOpen className="h-6 w-6" />} />
           <MetricCard title="Ebooks" value={profEbooks.length} icon={<FileText className="h-6 w-6" />} />
           <MetricCard title="Alumnos" value={profStudents} icon={<Users className="h-6 w-6" />} />
@@ -399,7 +399,7 @@ export default function AdminProfesorDetail() {
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Mantenemos Hubs y Cursos */}
           <Card>
-            <CardHeader><CardTitle>HUBs del Profesor</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Academias del Profesor</CardTitle></CardHeader>
             <CardContent>
               {profHubs.length > 0 ? (
                 <Table>
@@ -421,7 +421,7 @@ export default function AdminProfesorDetail() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-sm text-muted-foreground">No tiene HUBs creados.</p>
+                <p className="text-sm text-muted-foreground">No tiene Academias creadas.</p>
               )}
             </CardContent>
           </Card>

@@ -2,7 +2,7 @@ import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { useProfesorData } from "@/hooks/useProfesorData";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, DollarSign, BookOpen, Crown, Calendar, AlertCircle, AlertTriangle, CalendarClock, MessageSquare, Check, Circle, Loader2 } from "lucide-react";
+import { Users, DollarSign, BookOpen, Book, Crown, Calendar, AlertCircle, AlertTriangle, CalendarClock, MessageSquare, Check, Circle, Loader2 } from "lucide-react";
 import { parseISO, differenceInDays, addMonths } from "date-fns";
 import { formatDateProject } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 
 export default function ProfesorDashboard() {
   const { user } = useAuth();
-  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, profile, isLoading } = useProfesorData();
+  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, pricingOptions: profPricing, lessons: profLessons, comments: profComments, transactions, profile, isLoading } = useProfesorData();
 
   const prof = {
     id: user?.id || '',
@@ -25,10 +25,28 @@ export default function ProfesorDashboard() {
   };
 
   const today = new Date();
-  const thisMonth = profSales.filter(s => new Date(s.created_at).getMonth() === today.getMonth());
-  const totalStudents = new Set(profSales.map(s => s.alumno_id)).size;
-  const thisMonthAmount = "0.00"; 
-  const thisMonthCount = thisMonth.length;
+  
+  // Sales logic: Use transactions table as primary source, fallback to enrollments for legacy data
+  const monthTransactions = transactions.filter(t => new Date(t.created_at).getMonth() === today.getMonth());
+  const monthEnrollments = profSales.filter(s => new Date(s.created_at).getMonth() === today.getMonth());
+
+  let thisMonthAmount = 0;
+  let thisMonthCount = 0;
+
+  if (transactions.length > 0) {
+    thisMonthAmount = monthTransactions.reduce((acc, t) => acc + Number(t.amount), 0);
+    thisMonthCount = monthTransactions.length;
+  } else {
+    // Legacy fallback
+    thisMonthAmount = monthEnrollments.reduce((acc, sale) => {
+      const pricing = profPricing.find(p => p.product_id === sale.product_id && 
+        (sale.access_type === 'lifetime' ? p.type === 'one-time' : (p.type === 'monthly' || p.type === 'annual')));
+      return acc + (pricing ? Number(pricing.price) : 0);
+    }, 0);
+    thisMonthCount = monthEnrollments.length;
+  }
+
+  const totalStudents = new Set([...profSales.map(s => s.alumno_id), ...transactions.map(t => t.alumno_id)]).size;
   
   // Onboarding Logic
   const hasHub = profHubs.length > 0;
@@ -40,8 +58,10 @@ export default function ProfesorDashboard() {
   
   const daysUntilRenewal = prof.currentPeriodEnd ? differenceInDays(parseISO(prof.currentPeriodEnd), today) : null;
 
-  const upcomingStudentRenewals = profSales.map(sale => {
-    const nextCharge = addMonths(new Date(sale.created_at), 1);
+  const upcomingStudentRenewals = profSales.filter(s => s.status === 'active' && s.access_type === 'subscription').map(sale => {
+    const pricing = profPricing.find(p => p.product_id === sale.product_id && (p.type === 'monthly' || p.type === 'annual'));
+    const interval = pricing?.type === 'annual' ? 12 : 1;
+    const nextCharge = addMonths(new Date(sale.created_at), interval);
     const diff = differenceInDays(nextCharge, today);
     return { ...sale, nextCharge, daysLeft: diff };
   }).filter(s => s.daysLeft >= 0 && s.daysLeft <= 7)
@@ -57,8 +77,14 @@ export default function ProfesorDashboard() {
     );
   }
 
-  // "Comentarios sin responder" - placeholder until comments system is built
-  const unreadComments: any[] = [];
+  // "Comentarios sin responder" - fetched from database
+  const unreadComments = profComments?.filter(c => !c.is_read).map(c => ({
+    id: c.id,
+    userName: (c as any).profiles?.full_name || 'Anónimo',
+    text: c.text,
+    lessonId: c.lesson_id,
+    createdAt: c.created_at
+  })) || [];
 
   // Helper for relative time display
   const getRelativeTime = (dateStr: string) => {
@@ -69,7 +95,15 @@ export default function ProfesorDashboard() {
   };
 
   const getCommentLocation = (lessonId: string) => {
-    return null;
+    const lesson = profLessons.find(l => l.id === lessonId);
+    if (!lesson) return null;
+    const courseId = (lesson as any).modules?.course_id;
+    const courseObj = profCourses.find(c => c.id === courseId);
+    return {
+      courseTitle: courseObj?.title || 'Curso',
+      lessonTitle: lesson.title,
+      hubId: courseObj?.hub_id
+    };
   };
 
   return (
@@ -104,7 +138,7 @@ export default function ProfesorDashboard() {
                     </div>
                     <div>
                       <h4 className={`font-semibold ${hasHub ? 'text-green-800 line-through' : ''}`}>1. Crea tu Academia</h4>
-                      <p className="text-xs text-muted-foreground mt-1">Personaliza tu logo, colores y nombre de tu Hub.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Personaliza tu logo, colores y nombre de tu Academia.</p>
                     </div>
                   </div>
                 </Link>
@@ -171,6 +205,7 @@ export default function ProfesorDashboard() {
             icon={<DollarSign className="h-6 w-6" />} 
           />
           <MetricCard title="Cursos" value={profCourses.length} icon={<BookOpen className="h-6 w-6" />} />
+          <MetricCard title="E-books" value={profEbooks.length} icon={<Book className="h-6 w-6" />} />
         </div>
 
         <div className="space-y-6 pt-6 border-t mt-8">

@@ -48,14 +48,14 @@ export default function HubEditor() {
     return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
   }
 
-  if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">HUB no encontrado</p></ProfesorLayout>;
+  if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">Academia no encontrada</p></ProfesorLayout>;
 
   return (
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild><Link to="/dashboard/hubs"><ArrowLeft className="h-5 w-5" /></Link></Button>
-          <h1 className="text-2xl font-bold">Editar HUB</h1>
+          <h1 className="text-2xl font-bold">Editar Academia</h1>
         </div>
 
         <Tabs defaultValue="general" className="space-y-4">
@@ -67,7 +67,7 @@ export default function HubEditor() {
           <TabsContent value="general" className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Nombre del HUB</Label>
+                <Label>Nombre de la Academia</Label>
                 <Input value={name} onChange={e => setName(e.target.value)} />
               </div>
               <div className="space-y-2">

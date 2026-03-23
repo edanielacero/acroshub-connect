@@ -156,7 +156,7 @@ export default function ProfesorHubCursos() {
 
 
   if (isLoading) return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
-  if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">HUB no encontrado</p></ProfesorLayout>;
+  if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">Academia no encontrada</p></ProfesorLayout>;
 
   return (
     <ProfesorLayout>
@@ -167,7 +167,7 @@ export default function ProfesorHubCursos() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Cursos en {hub.name}</h1>
-            <p className="text-sm text-muted-foreground">Gestiona y organiza el contenido educativo de este HUB.</p>
+            <p className="text-sm text-muted-foreground">Gestiona y organiza el contenido educativo de esta Academia.</p>
           </div>
         </div>
 
@@ -297,7 +297,7 @@ export default function ProfesorHubCursos() {
           {hubCourses.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-sm text-muted-foreground flex flex-col items-center justify-center">
-                <p>Todavía no hay cursos en este HUB.</p>
+                <p>Todavía no hay cursos en esta Academia.</p>
               </CardContent>
             </Card>
           ) : (

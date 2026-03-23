@@ -18,13 +18,17 @@ serve(async (req: Request) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Missing Supabase environment variables (URL or Service Key)");
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { email, name, productId, productType, productTitle, profesorName, accessType, appUrl } = body;
+    const { email, name, productId, productType, productTitle, profesorName, accessType, appUrl, amount, currency } = body;
 
     if (!email) throw new Error("El email es obligatorio");
 
@@ -91,6 +95,22 @@ serve(async (req: Request) => {
           if (insErr) throw new Error(`Error insertando enrollment: ${insErr.message}`);
           console.log("Enrollment created successfully");
         }
+
+        // 3. Record Transaction
+        if (amount && amount > 0) {
+          const { error: txErr } = await supabaseAdmin
+            .from("transactions")
+            .insert({
+              alumno_id: existingProfile.id,
+              product_id: productId,
+              product_type: productType || "course",
+              amount: amount,
+              currency: currency || "USD",
+              method: "manual",
+              notes: "Registro directo (alumno ya activo)"
+            });
+          if (txErr) console.error("Error recording transaction:", txErr.message);
+        }
       }
 
       return new Response(
@@ -131,6 +151,8 @@ serve(async (req: Request) => {
           product_id: productId || null,
           product_type: productType || null,
           access_type: toDbAccessType(accessType || "lifetime"),
+          amount: amount || null,
+          currency: currency || "USD",
           last_sent_at: new Date().toISOString(),
         })
         .eq("id", existingInv.id);
@@ -149,6 +171,8 @@ serve(async (req: Request) => {
           product_id: productId || null,
           product_type: productType || null,
           access_type: toDbAccessType(accessType || "lifetime"),
+          amount: amount || null,
+          currency: currency || "USD",
           last_sent_at: new Date().toISOString(),
         });
       

@@ -20,7 +20,7 @@ import { Link } from "react-router-dom";
 
 export default function ProfesorAlumnos() {
   const { user } = useAuth();
-  const { enrollments: profSales, courses, ebooks, profile, isLoading, pricingOptions } = useProfesorData();
+  const { enrollments: profSales, courses, ebooks, profile, isLoading, pricingOptions, transactions } = useProfesorData();
   const { data: invitations = [], isLoading: loadingInv } = useInvitations();
   const inviteStudent = useInviteStudent();
   const resendInvitation = useResendInvitation();
@@ -81,6 +81,8 @@ export default function ProfesorAlumnos() {
         productTitle: selectedProduct?.title || 'Producto',
         profesorName: profile?.full_name || 'Tu profesor',
         accessType: mappedAccessType,
+        amount: productPrices.find(p => p.type === accessType)?.price || 0,
+        currency: productPrices.find(p => p.type === accessType)?.currency || 'USD',
       });
 
       setSubmitResult(result.status);
@@ -145,22 +147,51 @@ export default function ProfesorAlumnos() {
 
   // Build active list from Enrollments
   const activeStudentsMap = new Map();
+  
+  // 1. From Enrollments (Current and Canceled)
   profSales.forEach((s: any) => {
     const email = s.profiles?.email?.toLowerCase();
-    if (email && !activeStudentsMap.has(email)) {
-      activeStudentsMap.set(email, {
+    const id = s.alumno_id;
+    const key = email || id;
+    
+    if (key && !activeStudentsMap.has(key)) {
+      activeStudentsMap.set(key, {
         id: s.alumno_id,
-        name: s.profiles?.full_name || "Desconocido",
+        name: s.profiles?.full_name || "Alumno sin nombre",
         email: s.profiles?.email || "",
         productsCount: 0,
         createdAt: s.created_at,
         status: "active",
       });
     }
-    if (email) activeStudentsMap.get(email).productsCount++;
+    
+    if (key && s.status === 'active') {
+      activeStudentsMap.get(key).productsCount++;
+    }
   });
 
-  // Add students who have a Profile but no enrollment yet
+  // 2. From Transactions (Ensures visibility if enrollment was deleted)
+  transactions.forEach((tx: any) => {
+    const id = tx.alumno_id;
+    const email = tx.profiles?.email?.toLowerCase();
+    const key = email || id;
+    
+    // Check if either email key or student ID is already in the map
+    const existing = activeStudentsMap.has(key) || Array.from(activeStudentsMap.values()).find(s => s.id === id);
+    if (!existing) {
+      const inv = invitations.find(i => i.alumno_id === id);
+      activeStudentsMap.set(key, {
+        id: id,
+        name: tx.profiles?.full_name || inv?.name || "Alumno",
+        email: tx.profiles?.email || inv?.email || "",
+        productsCount: 0,
+        createdAt: tx.created_at,
+        status: "active",
+      });
+    }
+  });
+
+  // 3. From Invitations (Profile exists but no enrollment yet)
   invitations.forEach((inv: any) => {
     const email = inv.email.toLowerCase();
     const profile = invitedProfilesMap.get(email);
@@ -169,7 +200,7 @@ export default function ProfesorAlumnos() {
         id: profile.id,
         name: profile.full_name || inv.name,
         email: inv.email,
-        productsCount: 0, // STRICT DB TRUTH: This student has no enrollments yet
+        productsCount: 0,
         createdAt: inv.created_at,
         status: "active",
       });

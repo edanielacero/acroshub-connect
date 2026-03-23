@@ -6,11 +6,11 @@ import { DollarSign, Shield, Palette, ArrowRight, CheckCircle } from "lucide-rea
 const benefits = [
   { icon: DollarSign, title: "Sin comisiones", description: "Recibe el 100% de tus ventas. Sin intermediarios ni comisiones ocultas." },
   { icon: Shield, title: "Videos protegidos", description: "Tu contenido está seguro. Solo tus alumnos pueden acceder." },
-  { icon: Palette, title: "Tu propia marca", description: "Personaliza tu HUB con tu logo, colores y dominio." },
+  { icon: Palette, title: "Tu propia marca", description: "Personaliza tu Academia con tu logo, colores y dominio." },
 ];
 
 const steps = [
-  { step: "1", title: "Crea tu HUB", description: "Regístrate gratis y personaliza tu academia online en minutos." },
+  { step: "1", title: "Crea tu Academia", description: "Regístrate gratis y personaliza tu academia online en minutos." },
   { step: "2", title: "Sube tus cursos", description: "Agrega módulos, clases, videos y quizzes de forma sencilla." },
   { step: "3", title: "Vende y crece", description: "Comparte tu link, recibe pagos y haz crecer tu comunidad." },
 ];

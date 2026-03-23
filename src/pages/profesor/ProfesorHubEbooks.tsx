@@ -153,7 +153,7 @@ export default function ProfesorHubEbooks() {
 
 
   if (isLoading) return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
-  if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">HUB no encontrado</p></ProfesorLayout>;
+  if (!hub) return <ProfesorLayout><p className="p-8 text-center text-muted-foreground">Academia no encontrada</p></ProfesorLayout>;
 
   return (
     <ProfesorLayout>
@@ -164,7 +164,7 @@ export default function ProfesorHubEbooks() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Ebooks en {hub.name}</h1>
-            <p className="text-sm text-muted-foreground">Gestiona y organiza el contenido de lectura de este HUB.</p>
+            <p className="text-sm text-muted-foreground">Gestiona y organiza el contenido de lectura de esta Academia.</p>
           </div>
         </div>
 
@@ -282,7 +282,7 @@ export default function ProfesorHubEbooks() {
           {hubEbooks.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-sm text-muted-foreground flex flex-col items-center justify-center">
-                <p>Todavía no hay ebooks en este HUB.</p>
+                <p>Todavía no hay ebooks en esta Academia.</p>
               </CardContent>
             </Card>
           ) : (
