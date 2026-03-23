@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import ActivarCuenta from "./pages/auth/ActivarCuenta";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProfesores from "./pages/admin/AdminProfesores";
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/activar-cuenta" element={<ActivarCuenta />} />
 
             {/* Admin */}
             <Route element={<RoleRoute allowedRoles={['super_admin']} />}>

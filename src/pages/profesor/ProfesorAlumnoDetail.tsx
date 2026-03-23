@@ -2,8 +2,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
 import { useState } from "react";
 import { useProfesorData } from "@/hooks/useProfesorData";
+import { useInvitations, useResendInvitation } from "@/hooks/useInvitations";
 import { supabase } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, ChevronDown, ChevronUp, MoreHorizontal, AlertTriangle, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, MoreHorizontal, AlertTriangle, Plus, Loader2, Clock, Copy, Send } from "lucide-react";
 import { formatDateProject } from "@/lib/utils";
 import { toast } from "sonner";
 import { addDays, differenceInDays } from "date-fns";
@@ -25,53 +26,140 @@ export default function ProfesorAlumnoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { enrollments, courses, ebooks, isLoading } = useProfesorData();
+  const { data: invitations = [] } = useInvitations();
+  const resendInvitation = useResendInvitation();
+  const { enrollments, courses, ebooks, pricingOptions, isLoading } = useProfesorData();
 
-  const studentEnrollments = enrollments.filter(e => e.alumno_id === id);
-  const studentProfile = studentEnrollments[0]?.profiles;
-  const studentName = (studentProfile as any)?.full_name || 'Alumno Desconocido';
+  const isInvId = id?.startsWith('inv-');
+  const actualId = isInvId ? id?.replace('inv-', '') : id;
+
+  // Find invitation if any
+  const pendingInv = invitations.find((inv: any) => 
+    (isInvId && inv.id === actualId) || (!isInvId && inv.alumno_id === id && inv.status === 'pending')
+  );
+  const isAccountPending = !!pendingInv;
+
+  // Fetch profile if not found in enrollments (student with account but 0 products)
+  const { data: standaloneProfile, isLoading: loadingProfile } = useQuery({
+    queryKey: ['student_profile', actualId],
+    queryFn: async () => {
+      if (!actualId) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', actualId)
+        .maybeSingle();
+      if (error) throw error;
+      return data || null;
+    },
+    enabled: !isInvId && !!actualId
+  });
+
+  const studentEnrollments = enrollments.filter(e => e.alumno_id === actualId);
+  const studentProfile = studentEnrollments[0]?.profiles || standaloneProfile;
+  
+  const studentName = isInvId 
+    ? pendingInv?.name || 'Alumno por invitar'
+    : (studentProfile as any)?.full_name || pendingInv?.name || 'Alumno Desconocido';
+    
   const studentFirstAccess = studentEnrollments.length > 0 
     ? studentEnrollments.sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0].created_at 
-    : new Date().toISOString();
+    : (pendingInv?.created_at || new Date().toISOString());
 
-  const activeProducts = studentEnrollments.map(e => {
+  let activeProducts = studentEnrollments.map(e => {
     const isCourse = e.product_type === 'course';
     const product = isCourse ? courses.find(c => c.id === e.product_id) : ebooks.find(book => book.id === e.product_id);
+    const isSub = e.access_type === 'subscription';
+    
+    let expirationDate: string | null = null;
+    if (e.expires_at) {
+      expirationDate = e.expires_at;
+    } else if (isSub) {
+      const productPrice = pricingOptions.find(p => p.product_id === e.product_id && (p.type === 'monthly' || p.type === 'annual'));
+      if (productPrice) {
+        const d = new Date(e.created_at);
+        if (productPrice.type === 'monthly') expirationDate = new Date(d.setMonth(d.getMonth() + 1)).toISOString();
+        else if (productPrice.type === 'annual') expirationDate = new Date(d.setFullYear(d.getFullYear() + 1)).toISOString();
+      }
+    }
     
     return {
       enrollmentId: e.id,
       productId: e.product_id,
       productTitle: product?.title || 'Producto desconocido',
       productType: isCourse ? 'Curso' : 'Ebook',
-      subscriptionType: e.access_type === 'lifetime' ? 'Único Pago' : 'Suscripción',
+      subscriptionType: isSub ? 'Suscripción' : 'Único Pago',
       origin: 'Sistema', 
       accessDate: e.created_at,
-      expirationDate: null as string | null, 
+      expirationDate, 
       status: e.status, 
     };
   });
+
+  if (isInvId && pendingInv?.product_id) {
+    const isCourse = pendingInv.product_type === 'course';
+    const product = isCourse ? courses.find(c => c.id === pendingInv.product_id) : ebooks.find(book => book.id === pendingInv.product_id);
+    activeProducts.push({
+      enrollmentId: 'pending-' + pendingInv.id,
+      productId: pendingInv.product_id,
+      productTitle: product?.title || 'Producto por confirmar',
+      productType: isCourse ? 'Curso' : 'Ebook',
+      subscriptionType: pendingInv.access_type === 'lifetime' ? 'Único Pago' : 'Suscripción',
+      origin: 'Invitación pendiente', 
+      accessDate: pendingInv.created_at,
+      expirationDate: null, 
+      status: 'pending', 
+    });
+  }
   
-  const payments = studentEnrollments.map(e => ({
-     id: e.id,
-     createdAt: e.created_at,
-     productId: e.product_id,
-     amount: 0,
-     method: 'manual',
-     notes: 'Matrícula automática'
-  }));
+  const payments = studentEnrollments.map(e => {
+    const isSub = e.access_type === 'subscription';
+    const productPrice = pricingOptions.find(p => 
+      p.product_id === e.product_id && 
+       (isSub ? (p.type === 'monthly' || p.type === 'annual') : p.type === 'one-time')
+    );
+     
+    return {
+      id: e.id,
+      createdAt: e.created_at,
+      productId: e.product_id,
+      amount: productPrice ? Number(productPrice.price) : 0,
+      currency: productPrice?.currency || 'USD',
+      method: 'asignación directa',
+      notes: isSub ? 'Suscripción asignada' : 'Pago único asignado'
+    };
+  });
 
   // Modal States
   const [isExtendOpen, setIsExtendOpen] = useState(false);
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [newExpirationDate, setNewExpirationDate] = useState("");
 
   // New Payment Form State
   const [payProduct, setPayProduct] = useState("");
-  const [payAmount, setPayAmount] = useState("0");
-  const [paySubscription, setPaySubscription] = useState("");
+  const [paySubscription, setPaySubscription] = useState<string>("free");
   const [payNotes, setPayNotes] = useState("");
 
-  if (isLoading) {
+  const allProducts = [
+    ...courses.map((c: any) => ({ ...c, type: 'course' as const })),
+    ...ebooks.map((e: any) => ({ ...e, type: 'ebook' as const })),
+  ];
+  const selectedPayProduct = allProducts.find(p => p.id === payProduct);
+
+  const productPrices = pricingOptions.filter(p => p.product_id === payProduct);
+
+  const handleProductChange = (val: string) => {
+    setPayProduct(val);
+    const prices = pricingOptions.filter(p => p.product_id === val);
+    if (prices.length > 0) {
+      setPaySubscription(prices[0].type);
+    } else {
+      setPaySubscription('free');
+    }
+  };
+
+  if (isLoading || loadingProfile) {
     return (
       <ProfesorLayout>
         <div className="flex h-[50vh] items-center justify-center">
@@ -81,7 +169,7 @@ export default function ProfesorAlumnoDetail() {
     );
   }
 
-  if (activeProducts.length === 0 && studentEnrollments.length === 0) {
+  if (activeProducts.length === 0 && studentEnrollments.length === 0 && !isAccountPending && !standaloneProfile) {
     return (
       <ProfesorLayout>
         <div className="p-8 text-center text-muted-foreground">Alumno no encontrado o sin cursos</div>
@@ -104,11 +192,13 @@ export default function ProfesorAlumnoDetail() {
       return;
     }
     
+    const mappedAccessType = (paySubscription === 'one-time' || paySubscription === 'free') ? 'lifetime' : 'subscription';
+
     const { error } = await supabase.from('enrollments').insert({
-      alumno_id: id,
+      alumno_id: actualId,
       product_id: payProduct,
-      product_type: 'course', // MVP assumption that form selects courses
-      access_type: paySubscription === 'unico' ? 'lifetime' : 'subscription',
+      product_type: selectedPayProduct?.type || 'course',
+      access_type: mappedAccessType,
       status: 'active'
     });
 
@@ -120,8 +210,7 @@ export default function ProfesorAlumnoDetail() {
     toast.success("Pago registrado y acceso concedido.");
     queryClient.invalidateQueries({ queryKey: ['enrollments'] });
     setPayProduct("");
-    setPayAmount("0");
-    setPaySubscription("");
+    setPaySubscription("free");
     setPayNotes("");
   };
 
@@ -158,6 +247,50 @@ export default function ProfesorAlumnoDetail() {
   return (
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in pb-10">
+
+        {/* Pending activation banner */}
+        {isAccountPending && (
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-start gap-3">
+            <Clock className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <p className="font-semibold">Cuenta pendiente de activación</p>
+              <p className="text-sm">Este alumno aún no ha activado su cuenta.</p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                className="text-xs flex items-center gap-1 text-yellow-800 font-semibold hover:text-yellow-900 transition-colors disabled:opacity-50"
+                disabled={resendInvitation.isPending}
+                onClick={async () => {
+                  const result = await resendInvitation.mutateAsync(pendingInv);
+                  if (result.emailSent) {
+                    toast.success("Email de invitación reenviado");
+                  } else {
+                    toast.warning("No se pudo enviar el email. Se copió el link para envío manual.");
+                    navigator.clipboard.writeText(result.activationLink);
+                  }
+                }}
+              >
+                {resendInvitation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                Reenviar email
+              </button>
+              <button
+                className="text-xs flex items-center gap-1 text-yellow-800 font-semibold hover:text-yellow-900 transition-colors"
+                onClick={() => {
+                  const link = `${window.location.origin}/activar-cuenta?token=${pendingInv.token}`;
+                  navigator.clipboard.writeText(link);
+                  toast.success("Link copiado al portapapeles");
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copiar link
+              </button>
+            </div>
+          </div>
+        )}
         
         {expiringSub && (
           <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-800 p-4 rounded-md flex items-start gap-3">
@@ -182,7 +315,7 @@ export default function ProfesorAlumnoDetail() {
           <CardContent className="grid gap-6 p-6 sm:grid-cols-2 lg:grid-cols-4 items-center">
             <div>
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Email</p>
-              <p className="font-semibold">Protegido</p>
+              <p className="font-semibold">{(studentProfile as any)?.email || pendingInv?.email || '—'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Primer acceso</p>
@@ -238,7 +371,13 @@ export default function ProfesorAlumnoDetail() {
                               <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setSelectedProduct(p); setIsExtendOpen(true); }}>Extender acceso</DropdownMenuItem>
+                              {p.subscriptionType !== 'Único Pago' && (
+                                <DropdownMenuItem onClick={() => { 
+                                  setSelectedProduct(p); 
+                                  setNewExpirationDate(p.expirationDate ? p.expirationDate.split('T')[0] : ""); 
+                                  setIsExtendOpen(true); 
+                                }}>Extender acceso</DropdownMenuItem>
+                              )}
                               <DropdownMenuItem className="text-destructive font-medium" onClick={() => { setSelectedProduct(p); setIsRevokeOpen(true); }}>Revocar acceso</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -258,36 +397,43 @@ export default function ProfesorAlumnoDetail() {
             <CardTitle className="text-lg text-primary">Registrar pago manual</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleRegisterPayment} className="grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 items-end">
+             <form onSubmit={handleRegisterPayment} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div className="space-y-2 lg:col-span-1">
                 <Label>Producto</Label>
-                <Select value={payProduct} onValueChange={setPayProduct}>
+                <Select value={payProduct} onValueChange={handleProductChange}>
                   <SelectTrigger><SelectValue placeholder="Elegir..." /></SelectTrigger>
                   <SelectContent>
                     {courses.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                      <SelectItem key={c.id} value={c.id}>{c.title} — Curso</SelectItem>
+                    ))}
+                    {ebooks.map(e => (
+                      <SelectItem key={e.id} value={e.id}>{e.title} — Ebook</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 lg:col-span-1">
-                <Label>Monto</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input type="number" step="0.01" className="pl-7" placeholder="0.00" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
+
+              {payProduct && (
+                <div className="space-y-2 lg:col-span-1">
+                  <Label>Tipo de acceso</Label>
+                  <Select value={paySubscription} onValueChange={setPaySubscription}>
+                    <SelectTrigger><SelectValue placeholder="Tipo..." /></SelectTrigger>
+                    <SelectContent>
+                      {productPrices.map(p => (
+                        <SelectItem key={p.id} value={p.type}>
+                          {p.type === 'one-time' ? 'Pago Único' : `Suscripción ${p.type === 'monthly' ? 'Mensual' : 'Anual'}`} - ${p.price} {p.currency}
+                        </SelectItem>
+                      ))}
+                      {productPrices.length === 0 && (
+                        <SelectItem value="free">
+                          Acceso completo gratuito
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <div className="space-y-2 lg:col-span-1">
-                <Label>Suscripción</Label>
-                <Select value={paySubscription} onValueChange={setPaySubscription}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mensual">Mensual</SelectItem>
-                    <SelectItem value="anual">Anual</SelectItem>
-                    <SelectItem value="unico">Único pago</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              )}
+
               <div className="space-y-2 md:col-span-1 lg:col-span-1">
                 <Label>Notas (Opcional)</Label>
                 <Input placeholder="Ej. Pago Parcial" value={payNotes} onChange={e => setPayNotes(e.target.value)} />
@@ -323,8 +469,8 @@ export default function ProfesorAlumnoDetail() {
                     {payments.map(p => (
                       <TableRow key={p.id}>
                         <TableCell>{formatDateProject(p.createdAt)}</TableCell>
-                        <TableCell className="font-medium text-muted-foreground">{courses.find(c => c.id === p.productId)?.title || 'Desconocido'}</TableCell>
-                        <TableCell className="font-bold text-success">${p.amount.toFixed(2)}</TableCell>
+                        <TableCell className="font-medium text-muted-foreground">{courses.find(c => c.id === p.productId)?.title || ebooks.find(e => e.id === p.productId)?.title || 'Desconocido'}</TableCell>
+                        <TableCell className="font-bold text-success">${p.amount.toFixed(2)} {p.currency || 'USD'}</TableCell>
                         <TableCell><Badge className={`border-none capitalize ${getMethodBadge(p.method)}`}>{p.method}</Badge></TableCell>
                         <TableCell className="text-muted-foreground max-w-[200px] truncate" title={p.notes || ''}>{p.notes || '-'}</TableCell>
                       </TableRow>
@@ -376,24 +522,37 @@ export default function ProfesorAlumnoDetail() {
             <div className="space-y-4 py-2">
               <div className="p-3 bg-muted rounded-lg text-sm">
                 <p><span className="font-semibold">Producto:</span> {selectedProduct.productTitle}</p>
-                <p className="mt-1"><span className="font-semibold">Expiración actual:</span> Ilimitado</p>
+                <p className="mt-1"><span className="font-semibold">Expiración actual:</span> {selectedProduct.expirationDate ? formatDateProject(selectedProduct.expirationDate) : 'Ilimitado'}</p>
               </div>
               <div className="space-y-2">
                 <Label>Nueva fecha de expiración</Label>
-                <Input type="date" />
+                <Input 
+                  type="date" 
+                  value={newExpirationDate} 
+                  onChange={e => setNewExpirationDate(e.target.value)} 
+                  min={selectedProduct.expirationDate ? new Date(selectedProduct.expirationDate).toISOString().split('T')[0] : undefined}
+                />
               </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsExtendOpen(false)}>Cancelar</Button>
             <Button onClick={async () => {
-              // For now, extend by updating the enrollment status to active
-              if (selectedProduct) {
-                const { error } = await supabase.from('enrollments').update({ status: 'active' }).eq('id', selectedProduct.enrollmentId);
-                if (error) { toast.error(error.message); return; }
-                queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+              if (!selectedProduct) return;
+              if (!newExpirationDate) { toast.error("Seleccione una fecha"); return; }
+              
+              if (selectedProduct.expirationDate && new Date(newExpirationDate) <= new Date(selectedProduct.expirationDate)) {
+                toast.error("La nueva fecha debe ser posterior a la expiración actual.");
+                return;
               }
+
+              const { error } = await supabase.from('enrollments')
+                .update({ expires_at: new Date(newExpirationDate).toISOString(), status: 'active' })
+                .eq('id', selectedProduct.enrollmentId);
+                
+              if (error) { toast.error(error.message); return; }
               toast.success("Acceso extendido exitosamente"); 
+              queryClient.invalidateQueries({ queryKey: ['enrollments'] });
               setIsExtendOpen(false); 
             }}>Guardar</Button>
           </DialogFooter>

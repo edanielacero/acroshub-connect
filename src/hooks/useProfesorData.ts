@@ -54,7 +54,7 @@ export function useProfesorData() {
       if (productIds.length === 0) return [];
       const { data, error } = await supabase
         .from('enrollments')
-        .select(`*, profiles(full_name)`)
+        .select(`*, profiles(full_name, email)`)
         .in('product_id', productIds);
       if (error) throw error;
       return data;
