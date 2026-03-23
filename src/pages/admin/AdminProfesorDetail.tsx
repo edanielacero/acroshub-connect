@@ -210,7 +210,7 @@ export default function AdminProfesorDetail() {
           <CardContent className="grid gap-6 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-6 items-end">
             <div><p className="text-sm text-muted-foreground mb-1">Email</p><p className="font-medium break-all">{prof.email}</p></div>
             <div><p className="text-sm text-muted-foreground mb-1">Fecha de registro</p><p className="font-medium">{formatDateProject(prof.createdAt)}</p></div>
-            <div><p className="text-sm text-muted-foreground mb-1">Stripe Payouts</p><p className="font-medium">{prof.stripeConnected ? '✅ Conectado' : '❌ No conectado'}</p></div>
+            {/* <div><p className="text-sm text-muted-foreground mb-1">Stripe Payouts</p><p className="font-medium">{prof.stripeConnected ? '✅ Conectado' : '❌ No conectado'}</p></div> */}
             
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Estado</p>
@@ -256,7 +256,7 @@ export default function AdminProfesorDetail() {
                       <Label>Método de cobro</Label>
                       <Select value={payMethod} onValueChange={(v) => setPayMethod(v as typeof payMethod)} disabled={payType === 'downgrade'}>
                         <SelectTrigger><SelectValue/></SelectTrigger>
-                        <SelectContent><SelectItem value="manual">Manual/Externo</SelectItem><SelectItem value="stripe">Stripe Automático</SelectItem></SelectContent>
+                        <SelectContent><SelectItem value="manual">Manual/Externo</SelectItem>{/* <SelectItem value="stripe">Stripe Automático</SelectItem> */}</SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -359,7 +359,7 @@ export default function AdminProfesorDetail() {
                         <TableCell className="whitespace-nowrap">{formatDateProject(s.createdAt)}</TableCell>
                         <TableCell>
                           <Badge className={getSubBadgeColor(s.type)} variant="secondary">{s.type.replace('_', ' ')}</Badge>
-                          {s.method === 'stripe' && <span className="ml-2 text-xs text-muted-foreground">(Stripe)</span>}
+                          {/* {s.method === 'stripe' && <span className="ml-2 text-xs text-muted-foreground">(Stripe)</span>} */}
                         </TableCell>
                         <TableCell className="capitalize text-muted-foreground">
                           {s.planFrom ? `${s.planFrom} → ` : ''} <span className="text-foreground font-medium">{s.planTo}</span>

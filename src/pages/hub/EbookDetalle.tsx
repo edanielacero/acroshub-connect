@@ -71,7 +71,7 @@ export default function EbookDetalle() {
     if (isManualPayment && prof?.manual_payment_link) {
       window.open(prof.manual_payment_link, '_blank');
     } else {
-      toast.success("Redirigiendo a pasarela de pago (Stripe)...");
+      toast.error("Venta automática no disponible temporalmente.");
     }
   };
 
@@ -177,7 +177,7 @@ export default function EbookDetalle() {
                   
                   <div className="mt-4 pt-4 border-t text-center space-y-2">
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-                      <Lock className="h-3 w-3" /> {isManualPayment ? 'Pago acordado directo con experto' : 'Pago seguro con Stripe'}
+                      <Lock className="h-3 w-3" /> {isManualPayment ? 'Pago acordado directo con experto' : 'Pago no disponible'}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {isManualPayment ? 'El acceso se brindará manualmente' : 'Entrega inmediata garantizada'}

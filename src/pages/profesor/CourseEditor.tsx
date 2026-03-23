@@ -70,7 +70,82 @@ export default function CourseEditor() {
   const [isConfirmLeaveOpen, setIsConfirmLeaveOpen] = useState(false);
   
   // Multiple files attachments
-  const [attachedFiles, setAttachedFiles] = useState<{name: string, size: string}[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<{name: string, size: string, url: string}[]>([]);
+  
+  // Upload States
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [isAttachmentUploading, setIsAttachmentUploading] = useState(false);
+
+  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("video/")) {
+      toast.error("Solo se permiten archivos de video.");
+      return;
+    }
+
+    if (file.size > 500 * 1024 * 1024) {
+      toast.error("El video supera el límite de 500MB");
+      return;
+    }
+
+    setIsVideoUploading(true);
+    const fileExt = file.name.split('.').pop();
+    const safeName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `video_${safeName}_${Date.now()}.${fileExt}`;
+    const filePath = `${course?.profesor_id}/${course?.id}/${selectedLesson?.id}/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage.from('courses').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('courses').getPublicUrl(filePath);      
+      setLessonVideoUrl(data.publicUrl);
+      setVideoTab('url');
+      toast.success("Video subido. No olvides Guardar la clase.");
+    } catch (error: any) {
+      toast.error(`Error al subir video: ${error.message}`);
+    } finally {
+      setIsVideoUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleAttachmentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("El archivo supera el límite de 50MB");
+      return;
+    }
+
+    setIsAttachmentUploading(true);
+    const fileExt = file.name.split('.').pop();
+    const safeName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `attach_${safeName}_${Date.now()}.${fileExt}`;
+    const filePath = `${course?.profesor_id}/${course?.id}/${selectedLesson?.id}/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage.from('courses').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('courses').getPublicUrl(filePath);
+      
+      setAttachedFiles(prev => [...prev, { 
+        name: file.name, 
+        size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+        url: data.publicUrl
+      }]);
+      toast.success("Archivo adjunto subido. No olvides Guardar la clase.");
+    } catch (error: any) {
+      toast.error(`Error al subir archivo: ${error.message}`);
+    } finally {
+      setIsAttachmentUploading(false);
+      event.target.value = "";
+    }
+  };
   
   // Create Module States
   const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
@@ -123,12 +198,13 @@ export default function CourseEditor() {
       is_free_preview: lessonIsFree,
       video_url: lessonVideoUrl || null,
       content: lessonContent || null,
+      attachments: attachedFiles,
     }).eq('id', selectedLesson.id);
     setIsSavingLesson(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Clase guardada correctamente");
     // Update local selected lesson so unsaved changes tracking resets
-    setSelectedLesson({ ...selectedLesson, title: lessonTitle, is_free_preview: lessonIsFree, video_url: lessonVideoUrl, content: lessonContent });
+    setSelectedLesson({ ...selectedLesson, title: lessonTitle, is_free_preview: lessonIsFree, video_url: lessonVideoUrl, content: lessonContent, attachments: attachedFiles });
     queryClient.invalidateQueries({ queryKey: ['modules', id] });
   };
 
@@ -279,6 +355,11 @@ export default function CourseEditor() {
       setLessonIsFree(!!selectedLesson.is_free_preview);
       setLessonVideoUrl(selectedLesson.video_url || "");
       setLessonContent(selectedLesson.content || "");
+      if (selectedLesson.attachments && Array.isArray(selectedLesson.attachments)) {
+        setAttachedFiles(selectedLesson.attachments);
+      } else {
+        setAttachedFiles([]);
+      }
     }
   }, [selectedLesson]);
 
@@ -435,9 +516,28 @@ export default function CourseEditor() {
                       <TabsTrigger value="url">Importar URL</TabsTrigger>
                     </TabsList>
                     <TabsContent value="upload">
-                      <div className="rounded-lg border-2 border-dashed p-6 text-center text-sm text-muted-foreground sm:p-8">
-                        Arrastra un video o haz clic para seleccionar
-                      </div>
+                      <input 
+                        type="file" 
+                        accept="video/*" 
+                        className="hidden" 
+                        id="video-upload" 
+                        onChange={handleVideoUpload}
+                        disabled={isVideoUploading}
+                      />
+                      <label 
+                        htmlFor="video-upload" 
+                        className={`rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group block ${isVideoUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                      >
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            {isVideoUploading ? <Loader2 className="h-6 w-6 text-primary animate-spin" /> : <Video className="h-6 w-6 text-primary" />}
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{isVideoUploading ? 'Subiendo video... esto puede tomar minutos.' : 'Arrastra un video o haz clic para seleccionar'}</p>
+                            <p className="text-sm text-muted-foreground mt-1">Archivo MP4, WEBM (Máx. 500MB)</p>
+                          </div>
+                        </div>
+                      </label>
                     </TabsContent>
                     <TabsContent value="url" className="space-y-2">
                       <Input placeholder="https://youtube.com/watch?v=..." value={lessonVideoUrl} onChange={e => setLessonVideoUrl(e.target.value)} />
@@ -453,17 +553,27 @@ export default function CourseEditor() {
                   <Label className="flex items-center gap-2"><Paperclip className="h-4 w-4" />Archivos adjuntos</Label>
                   
                   {/* Zona de subida */}
-                  <div className="rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group">
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    id="attachment-upload" 
+                    onChange={handleAttachmentUpload}
+                    disabled={isAttachmentUploading}
+                  />
+                  <label 
+                    htmlFor="attachment-upload" 
+                    className={`rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/50 hover:bg-muted transition-colors p-8 text-center cursor-pointer group block ${isAttachmentUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
                     <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <UploadCloud className="h-6 w-6 text-primary" />
+                      <div className="h-12 w-12 rounded-full bg-background flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                        {isAttachmentUploading ? <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" /> : <UploadCloud className="h-6 w-6 text-muted-foreground" />}
                       </div>
                       <div>
-                        <p className="font-medium">Haz clic o arrastra tus archivos aquí</p>
+                        <p className="font-medium">{isAttachmentUploading ? 'Subiendo archivo...' : 'Haz clic o selecciona tus archivos aquí'}</p>
                         <p className="text-sm text-muted-foreground mt-1">PDF, DOC, ZIP, Audio, etc. (Máx. 50MB por archivo)</p>
                       </div>
                     </div>
-                  </div>
+                  </label>
 
                   {/* Lista de archivos subidos */}
                   {attachedFiles.length > 0 && (
@@ -683,6 +793,8 @@ export default function CourseEditor() {
                     title: lessonTitle,
                     is_free_preview: lessonIsFree,
                     video_url: lessonVideoUrl || null,
+                    content: lessonContent || null,
+                    attachments: attachedFiles,
                   }).eq('id', selectedLesson.id);
                   queryClient.invalidateQueries({ queryKey: ['modules', id] });
                 }

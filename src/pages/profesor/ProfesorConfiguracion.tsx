@@ -170,6 +170,7 @@ export default function ProfesorConfiguracion() {
           </CardContent>
         </Card>
 
+        {/* STRIPE UI HIDDEN FOR NOW
         <Card>
           <CardHeader><CardTitle>Stripe Connect</CardTitle></CardHeader>
           <CardContent>
@@ -179,6 +180,7 @@ export default function ProfesorConfiguracion() {
             </div>
           </CardContent>
         </Card>
+        */}
 
         <Button className="w-full sm:w-auto" onClick={handleSaveProfile} disabled={isSaving}>
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

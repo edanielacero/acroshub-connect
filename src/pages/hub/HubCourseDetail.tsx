@@ -87,7 +87,7 @@ export default function HubCourseDetail() {
                   </Button>
                 </div>
               ) : (
-                <Button className="w-full" onClick={() => toast.info("Redirigiendo a pasarela de pago (Stripe/WhatsApp)...")}>
+                <Button className="w-full" onClick={() => toast.info("Redirigiendo a pago manual...")}>
                   Comprar curso
                 </Button>
               )}

@@ -26,11 +26,17 @@ export default function EbookEditor() {
   const [ebookTitle, setEbookTitle] = useState("");
   const [ebookDescription, setEbookDescription] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<{name: string, size: string}[]>([]);
+  const [pdfUrl, setPdfUrl] = useState<string>("");
   
   useEffect(() => {
     if (ebook) {
       setEbookTitle(ebook.title || "");
       setEbookDescription(ebook.description || "");
+      if (ebook.pdf_url && !pdfUrl) {
+         setPdfUrl(ebook.pdf_url);
+         const fileName = ebook.pdf_url.split('/').pop() || 'documento.pdf';
+         setAttachedFiles([{ name: fileName, size: 'PDF Guardado' }]);
+      }
     }
   }, [ebook]);
 
@@ -45,8 +51,8 @@ export default function EbookEditor() {
   if (ebook && ebookDescription !== ebook.description) {
     unsavedChanges.push({ field: "Descripción", original: ebook.description || "(Vacía)", new: ebookDescription || "(Vacía)" });
   }
-  if (attachedFiles.length > 0) {
-    unsavedChanges.push({ field: "Archivos del Ebook", original: "0 Archivos", new: `${attachedFiles.length} Archivos adjuntos` });
+  if (ebook && pdfUrl !== (ebook.pdf_url || "")) {
+    unsavedChanges.push({ field: "Archivo del Ebook", original: ebook.pdf_url ? "1 Archivo" : "0 Archivos", new: pdfUrl ? "1 Archivo adjunto" : "0 Archivos" });
   }
 
   const handleBackClick = () => {
@@ -64,7 +70,8 @@ export default function EbookEditor() {
     setIsSaving(true);
     const { error } = await supabase.from('ebooks').update({
       title: ebookTitle,
-      description: ebookDescription
+      description: ebookDescription,
+      pdf_url: pdfUrl || null
     }).eq('id', ebook.id);
     setIsSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -73,9 +80,52 @@ export default function EbookEditor() {
     navigate(`/dashboard/hubs/${ebook.hub_id}/ebooks`);
   };
 
-  const simulateUpload = () => {
-    toast.success("Archivo subido simulado");
-    setAttachedFiles([...attachedFiles, { name: `libro-capitulos-${attachedFiles.length + 1}.pdf`, size: "4.2 MB" }]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Solo se permiten archivos PDF para los Ebooks.");
+      return;
+    }
+    
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("El archivo supera el límite de 100MB");
+      return;
+    }
+
+    setIsUploading(true);
+    // Sanitize filename and create unique path
+    const fileExt = file.name.split('.').pop();
+    const safeName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `${safeName}_${Date.now()}.${fileExt}`;
+    const filePath = `${ebook?.profesor_id}/${ebook?.id}/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('ebooks')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('ebooks').getPublicUrl(filePath);
+      
+      setPdfUrl(data.publicUrl);
+      setAttachedFiles([{ name: file.name, size: (file.size / (1024 * 1024)).toFixed(2) + " MB" }]);
+      toast.success("Archivo PDF subido. No olvides Guardar el Ebook.");
+    } catch (error: any) {
+      toast.error(`Error al subir archivo: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setAttachedFiles([]);
+    setPdfUrl("");
   };
 
   if (isLoading) return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;
@@ -113,17 +163,32 @@ export default function EbookEditor() {
                 <Label className="flex items-center gap-2"><UploadCloud className="h-4 w-4" />Archivo del Ebook (PDF, EPUB)</Label>
                 
                 {/* Zona de subida */}
-                <div onClick={simulateUpload} className="rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group">
-                  <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <UploadCloud className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Haz clic o arrastra el archivo de tu libro aquí</p>
-                      <p className="text-sm text-muted-foreground mt-1">Soporta formatos PDF y EPUB (Máx. 100MB)</p>
-                    </div>
-                  </div>
-                </div>
+                {attachedFiles.length === 0 && (
+                  <>
+                    <input 
+                      type="file" 
+                      accept=".pdf" 
+                      className="hidden" 
+                      id="ebook-upload" 
+                      onChange={handleFileUpload}
+                      disabled={isUploading}
+                    />
+                    <label 
+                      htmlFor="ebook-upload" 
+                      className={`rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group block ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          {isUploading ? <Loader2 className="h-6 w-6 text-primary animate-spin" /> : <UploadCloud className="h-6 w-6 text-primary" />}
+                        </div>
+                        <div>
+                          <p className="font-medium">{isUploading ? 'Subiendo PDF...' : 'Haz clic o selecciona tu PDF aquí'}</p>
+                          <p className="text-sm text-muted-foreground mt-1">Solo formato PDF (Máx. 100MB)</p>
+                        </div>
+                      </div>
+                    </label>
+                  </>
+                )}
 
                 {/* Lista de archivos subidos */}
                 {attachedFiles.length > 0 && (
@@ -139,7 +204,7 @@ export default function EbookEditor() {
                             <p className="text-xs text-muted-foreground">{file.size}</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:bg-destructive hover:text-white" onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}>
+                        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:bg-destructive hover:text-white" onClick={handleRemoveFile}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

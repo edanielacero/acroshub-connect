@@ -164,7 +164,7 @@ export default function ProfesorDashboard() {
                     </div>
                     <div>
                       <h4 className={`font-semibold ${hasPayments ? 'text-green-800 line-through' : ''}`}>3. Configura Pagos</h4>
-                      <p className="text-xs text-muted-foreground mt-1">Conecta Stripe o provee un link para venta manual.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Provee un enlace para venta manual y empieza a ganar.</p>
                     </div>
                   </div>
                 </Link>

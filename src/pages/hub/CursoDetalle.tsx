@@ -90,7 +90,7 @@ export default function CursoDetalle() {
     if (isManualPayment && prof?.manualPaymentLink) {
       window.open(prof.manualPaymentLink, '_blank');
     } else {
-      toast.success("Redirigiendo a pasarela de pago (Stripe)...");
+      toast.error("Venta automática no disponible temporalmente.");
     }
   };
 
@@ -227,7 +227,7 @@ export default function CursoDetalle() {
                   
                   <div className="mt-4 pt-4 border-t text-center space-y-2">
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-                      <Lock className="h-3 w-3" /> {isManualPayment ? 'Pago acordado directo con experto' : 'Pago seguro con Stripe'}
+                      <Lock className="h-3 w-3" /> {isManualPayment ? 'Pago acordado directo con experto' : 'Pago no disponible'}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {isManualPayment ? 'El acceso se brindará manualmente' : 'Garantía de devolución de 7 días'}
