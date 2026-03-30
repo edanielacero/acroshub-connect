@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { CheckCircle, Loader2, Crown, Calendar, ArrowDownCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { formatDateProject } from "@/lib/utils";
 
 export default function ProfesorConfiguracion() {
   const { user } = useAuth();
@@ -108,6 +109,39 @@ export default function ProfesorConfiguracion() {
     <ProfesorLayout>
       <div className="max-w-2xl space-y-6 animate-fade-in">
         <h1 className="text-2xl font-bold">Configuración</h1>
+
+        {/* Plan Info Card */}
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-primary" /> Mi Plan
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Plan actual</p>
+                <Badge className="text-base capitalize px-3 py-1">{profile?.plan || 'gratis'}</Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Ciclo de facturación</p>
+                <p className="font-medium capitalize">{profile?.billing_cycle || 'N/A'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" /> Renovación
+                </p>
+                <p className="font-medium">{profile?.current_period_end ? formatDateProject(profile.current_period_end) : 'N/A'}</p>
+              </div>
+            </div>
+            {profile?.scheduled_downgrade_plan && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2 text-sm text-blue-800">
+                <ArrowDownCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>Al finalizar tu ciclo actual, tu plan cambiará a <strong className="capitalize">{profile.scheduled_downgrade_plan}</strong>.</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader><CardTitle>Datos personales</CardTitle></CardHeader>

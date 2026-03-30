@@ -152,7 +152,7 @@ export default function AdminProfesorDetail() {
       const { error: subErr } = await supabase.from('platform_subscriptions').insert({
         tenant_id: prof.id,
         type: payType,
-        plan_from: payType === 'first_payment' ? null : prof.plan,
+        plan_from: prof.plan || 'gratis',
         plan_to: payPlan,
         billing_cycle: payCycle,
         amount: Number(payAmount) || 0,

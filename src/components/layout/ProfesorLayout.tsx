@@ -1,10 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, FolderOpen, Users, BarChart3, Settings, Menu, LogOut, ChevronDown } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Users, BarChart3, Settings, Menu, LogOut, ChevronDown, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 
 const profLinks = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -20,6 +22,39 @@ export function ProfesorLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const profName = user?.user_metadata?.full_name || 'Profesor';
+
+  const { data: profileStatus } = useQuery({
+    queryKey: ['profile_status', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('status').eq('id', user!.id).single();
+      return data?.status || 'activo';
+    },
+    enabled: !!user?.id,
+    refetchInterval: 60000 // Re-check every minute
+  });
+
+  if (profileStatus === 'suspendido') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30 p-6">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="mx-auto h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+            <ShieldAlert className="h-8 w-8 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-bold text-destructive">Cuenta Suspendida</h1>
+          <p className="text-muted-foreground">
+            Tu cuenta de profesor ha sido suspendida por el administrador de la plataforma. 
+            Mientras esté suspendida, no podrás acceder a tu panel de control.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Si crees que esto es un error, contacta al administrador de Acroshub para más información.
+          </p>
+          <Button variant="outline" onClick={async () => { await supabase.auth.signOut(); navigate('/'); }}>
+            <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-muted/30">
@@ -73,7 +108,7 @@ export function ProfesorLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenuItem onClick={() => navigate('/dashboard/configuracion')}>
                 <Settings className="mr-2 h-4 w-4" />Configuración
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/')}>
+              <DropdownMenuItem onClick={async () => { await supabase.auth.signOut(); navigate('/'); }}>
                 <LogOut className="mr-2 h-4 w-4" />Cerrar sesión
               </DropdownMenuItem>
             </DropdownMenuContent>
