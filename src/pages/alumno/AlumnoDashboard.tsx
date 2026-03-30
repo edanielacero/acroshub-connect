@@ -42,11 +42,14 @@ export default function AlumnoDashboard() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {hubsConAcceso.map((hub: any) => (
             <Card key={hub.id} className="hover:shadow-lg transition-shadow overflow-hidden flex flex-col">
-              <div className="h-32 bg-gradient-to-br from-primary/20 to-primary/5 relative flex items-center justify-center">
-                {hub.logo ? (
-                  <img src={hub.logo} alt={hub.name} className="absolute bottom-4 left-4 h-14 max-w-[120px] object-contain bg-background/80 p-2 rounded-lg backdrop-blur" />
+              <div className="h-32 bg-gradient-to-br from-primary/20 to-primary/5 relative flex items-center justify-center overflow-hidden">
+                {hub.cover_url && (
+                  <img src={hub.cover_url} alt="Portada de la Academia" className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105" />
+                )}
+                {hub.logo_url ? (
+                  <img src={hub.logo_url} alt={hub.name} className="absolute bottom-4 left-4 h-14 max-w-[120px] object-contain bg-background/90 p-2 rounded-lg backdrop-blur shadow-sm z-10" />
                 ) : (
-                  <span className="text-4xl opacity-20 font-bold">{hub.name.charAt(0)}</span>
+                  <span className="text-4xl opacity-20 font-bold z-10">{hub.name.charAt(0)}</span>
                 )}
               </div>
               <CardContent className="p-5 flex-1 flex flex-col justify-between">

@@ -29,17 +29,12 @@ export default function EbookEditor() {
   const { ebooks, isLoading } = useProfesorData();
   const ebook = ebooks.find((e: any) => e.id === id);
   
-  // Controlled fields to track unsaved changes
-  const [ebookTitle, setEbookTitle] = useState("");
-  const [ebookDescription, setEbookDescription] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<{name: string, size: string}[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string>("");
   const [pdfPages, setPdfPages] = useState<number | null>(null);
-  
+
   useEffect(() => {
     if (ebook) {
-      setEbookTitle(ebook.title || "");
-      setEbookDescription(ebook.description || "");
       if (ebook.pdf_url && !pdfUrl) {
          setPdfUrl(ebook.pdf_url);
          const fileName = ebook.pdf_url.split('/').pop() || 'documento.pdf';
@@ -49,19 +44,13 @@ export default function EbookEditor() {
         setPdfPages(ebook.pages);
       }
     }
-  }, [ebook]);
+  }, [ebook, pdfUrl]);
 
   // Unsaved changes tracking
   const [isConfirmLeaveOpen, setIsConfirmLeaveOpen] = useState(false);
 
   // Compute Unsaved Changes
-  const unsavedChanges = [];
-  if (ebook && ebookTitle !== ebook.title) {
-    unsavedChanges.push({ field: "Título del Ebook", original: ebook.title, new: ebookTitle });
-  }
-  if (ebook && ebookDescription !== ebook.description) {
-    unsavedChanges.push({ field: "Descripción", original: ebook.description || "(Vacía)", new: ebookDescription || "(Vacía)" });
-  }
+  const unsavedChanges: any[] = [];
   if (ebook && pdfUrl !== (ebook.pdf_url || "")) {
     unsavedChanges.push({ field: "Archivo del Ebook", original: ebook.pdf_url ? "1 Archivo" : "0 Archivos", new: pdfUrl ? "1 Archivo adjunto" : "0 Archivos" });
   }
@@ -80,8 +69,6 @@ export default function EbookEditor() {
     if (!ebook) return;
     setIsSaving(true);
     const { error } = await supabase.from('ebooks').update({
-      title: ebookTitle,
-      description: ebookDescription,
       pdf_url: pdfUrl || null,
       pages: pdfPages
     }).eq('id', ebook.id);
@@ -162,80 +149,71 @@ export default function EbookEditor() {
           <Button variant="ghost" size="icon" onClick={handleBackClick}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Input 
-            value={ebookTitle} 
-            onChange={(e) => setEbookTitle(e.target.value)} 
-            className="px-0 text-xl font-bold border-none shadow-none focus-visible:ring-0 sm:text-2xl" 
-          />
+          <div className="flex-1">
+            <h1 className="text-xl font-bold sm:text-2xl">{ebook.title}</h1>
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr]">
           <Card>
             <CardContent className="space-y-6 p-4 sm:p-6">
               
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Book className="h-4 w-4" />Introducción / Descripción Ampliada</Label>
-                <Textarea 
-                  rows={6} 
-                  value={ebookDescription} 
-                  onChange={e => setEbookDescription(e.target.value)} 
-                  placeholder="Escribe la sinopsis o el contenido principal de lectura aquí..."
-                />
-              </div>
-
-              <div className="space-y-4">
-                <Label className="flex items-center gap-2"><UploadCloud className="h-4 w-4" />Archivo del Ebook (PDF, EPUB)</Label>
-                
-                {/* Zona de subida */}
-                {attachedFiles.length === 0 && (
-                  <>
-                    <input 
-                      type="file" 
-                      accept=".pdf" 
-                      className="hidden" 
-                      id="ebook-upload" 
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                    />
-                    <label 
-                      htmlFor="ebook-upload" 
-                      className={`rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group block ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
-                    >
-                      <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          {isUploading ? <Loader2 className="h-6 w-6 text-primary animate-spin" /> : <UploadCloud className="h-6 w-6 text-primary" />}
-                        </div>
-                        <div>
-                          <p className="font-medium">{isUploading ? 'Subiendo PDF...' : 'Haz clic o selecciona tu PDF aquí'}</p>
-                          <p className="text-sm text-muted-foreground mt-1">Solo formato PDF (Máx. 100MB)</p>
-                        </div>
-                      </div>
-                    </label>
-                  </>
-                )}
-
-                {/* Lista de archivos subidos */}
-                {attachedFiles.length > 0 && (
-                  <div className="space-y-2 mt-4">
-                    {attachedFiles.map((file, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-card">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="p-2 bg-muted rounded-md shrink-0">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
+                <div className="max-w-2xl w-full">
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-2"><UploadCloud className="h-4 w-4" />Archivo del Ebook (PDF, EPUB)</Label>
+                  
+                  {/* Zona de subida PDF */}
+                  {attachedFiles.length === 0 && (
+                    <>
+                      <input 
+                        type="file" 
+                        accept=".pdf" 
+                        className="hidden" 
+                        id="ebook-upload" 
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                      />
+                      <label 
+                        htmlFor="ebook-upload" 
+                        className={`rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group block ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                      >
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            {isUploading ? <Loader2 className="h-6 w-6 text-primary animate-spin" /> : <UploadCloud className="h-6 w-6 text-primary" />}
                           </div>
-                          <div className="truncate">
-                            <p className="text-sm font-medium truncate">{file.name}</p>
-                            <p className="text-xs text-muted-foreground">{file.size}</p>
+                          <div>
+                            <p className="font-medium text-sm">{isUploading ? 'Subiendo PDF...' : 'Subir tu PDF aquí'}</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">Solo PDF (Máx. 100MB)</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:bg-destructive hover:text-white" onClick={handleRemoveFile}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      </label>
+                    </>
+                  )}
+
+                  {/* Lista de archivos PDF subidos */}
+                  {attachedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      {attachedFiles.map((file, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 bg-muted rounded-md shrink-0">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="truncate">
+                              <p className="text-sm font-medium truncate">{file.name}</p>
+                              <p className="text-xs text-muted-foreground">{file.size}</p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:bg-destructive hover:text-white" onClick={handleRemoveFile}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                </div>
 
               <Button className="w-full sm:w-auto" onClick={handleSaveEbook} disabled={isSaving}>
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

@@ -47,17 +47,12 @@ export default function CourseEditor() {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [videoTab, setVideoTab] = useState<'upload' | 'url'>('url');
   
-  const [courseTitle, setCourseTitle] = useState("");
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonIsFree, setLessonIsFree] = useState(false);
   const [lessonVideoUrl, setLessonVideoUrl] = useState("");
   const [lessonContent, setLessonContent] = useState("");
 
-  useEffect(() => {
-    if (course) {
-      setCourseTitle(course.title || "");
-    }
-  }, [course]);
+  // Removed course hooks
 
   // Auto-select first lesson when modules load
   useEffect(() => {
@@ -146,7 +141,8 @@ export default function CourseEditor() {
       event.target.value = "";
     }
   };
-  
+
+
   // Create Module States
   const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
   const [newModuleName, setNewModuleName] = useState("");
@@ -348,6 +344,7 @@ export default function CourseEditor() {
     queryClient.invalidateQueries({ queryKey: ['quiz', selectedLesson?.id] });
   };
 
+
   // Update tracked states when switching lessons
   useEffect(() => {
     if (selectedLesson) {
@@ -364,10 +361,7 @@ export default function CourseEditor() {
   }, [selectedLesson]);
 
   // Compute Unsaved Changes
-  const unsavedChanges = [];
-  if (course && courseTitle !== course.title) {
-    unsavedChanges.push({ field: "Título del Curso", original: course.title, new: courseTitle });
-  }
+  const unsavedChanges: any[] = [];
   if (selectedLesson) {
     if (lessonTitle !== selectedLesson.title) {
       unsavedChanges.push({ field: "Título de la clase", original: selectedLesson.title, new: lessonTitle });
@@ -398,10 +392,13 @@ export default function CourseEditor() {
           <Button variant="ghost" size="icon" onClick={handleBackClick}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Input value={courseTitle} onChange={(e) => setCourseTitle(e.target.value)} className="px-0 text-xl font-bold border-none shadow-none focus-visible:ring-0 sm:text-2xl" />
+          <div className="flex-1">
+            <h1 className="text-xl font-bold sm:text-2xl">{course.title}</h1>
+          </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <div className="w-full">
+          <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Módulos</h3>
@@ -731,6 +728,7 @@ export default function CourseEditor() {
               Selecciona una clase para editarla
             </div>
           )}
+            </div>
         </div>
       </div>
 
@@ -782,11 +780,6 @@ export default function CourseEditor() {
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto order-1 sm:order-2">
               <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsConfirmLeaveOpen(false)}>Cancelar</Button>
               <Button className="w-full sm:w-auto" onClick={async () => {
-                // Save course title
-                if (course && courseTitle !== course.title) {
-                  await supabase.from('courses').update({ title: courseTitle }).eq('id', course.id);
-                  queryClient.invalidateQueries({ queryKey: ['courses'] });
-                }
                 // Save current lesson if selected
                 if (selectedLesson) {
                   await supabase.from('lessons').update({

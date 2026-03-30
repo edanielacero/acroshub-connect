@@ -112,6 +112,17 @@ export default function CursoDetalle() {
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">{course.title}</h1>
           <p className="text-xl text-muted-foreground mt-5 leading-relaxed">{course.description}</p>
           
+          {course.thumbnail_url && (
+            <div className="mt-8 rounded-2xl overflow-hidden border shadow-lg aspect-video bg-muted relative group">
+              <img 
+                src={course.thumbnail_url} 
+                alt={course.title} 
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          )}
+          
           {/* Contenido del curso (lista de módulos) */}
           <div className="mt-12 bg-card border rounded-2xl p-6 shadow-sm">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">

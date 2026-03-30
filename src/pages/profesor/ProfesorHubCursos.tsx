@@ -6,10 +6,11 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, BookOpen, GripVertical, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, BookOpen, GripVertical, Plus, Loader2, UploadCloud, Trash2, Settings, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,8 @@ export default function ProfesorHubCursos() {
   const [isCreating, setIsCreating] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseDesc, setNewCourseDesc] = useState("");
+  const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
+  const [newThumbnailPreview, setNewThumbnailPreview] = useState("");
   const [hasLifetime, setHasLifetime] = useState(true);
   const [lifetimePrice, setLifetimePrice] = useState("");
   const [hasMonthly, setHasMonthly] = useState(false);
@@ -67,6 +70,20 @@ export default function ProfesorHubCursos() {
       return;
     }
 
+    if (newThumbnailFile) {
+      const fileExt = newThumbnailFile.name.split('.').pop();
+      const fileName = `thumb_${Date.now()}.${fileExt}`;
+      const filePath = `${user?.id}/${newCourse.id}/${fileName}`;
+      const { error: uploadError } = await supabase.storage.from('courses').upload(filePath, newThumbnailFile);
+      
+      if (!uploadError) {
+        const { data } = supabase.storage.from('courses').getPublicUrl(filePath);
+        await supabase.from('courses').update({ thumbnail_url: data.publicUrl }).eq('id', newCourse.id);
+      } else {
+        toast.error("El curso se creó pero hubo un error subiendo la portada.");
+      }
+    }
+
     const pricingOptions = [];
     if (hasLifetime) pricingOptions.push({ product_id: newCourse.id, product_type: 'course', type: 'one-time', price: Number(lifetimePrice)||0, currency: 'USD' });
     if (hasMonthly) pricingOptions.push({ product_id: newCourse.id, product_type: 'course', type: 'monthly', price: Number(monthlyPrice)||0, currency: 'USD' });
@@ -80,6 +97,9 @@ export default function ProfesorHubCursos() {
     
     setNewCourseName("");
     setNewCourseDesc("");
+    setNewThumbnailFile(null);
+    if (newThumbnailPreview) URL.revokeObjectURL(newThumbnailPreview);
+    setNewThumbnailPreview("");
     setHasLifetime(true);
     setLifetimePrice("");
     setHasMonthly(false);
@@ -87,8 +107,12 @@ export default function ProfesorHubCursos() {
     setHasAnnual(false);
     setAnnualPrice("");
     setIsCreating(false);
+    setCreateActiveTab("global");
     navigate(`/dashboard/cursos/${newCourse.id}`); 
   };
+
+  const [createActiveTab, setCreateActiveTab] = useState("global");
+  const [editActiveTab, setEditActiveTab] = useState("global");
 
   // --- EDIT COURSE MODAL STATES ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,11 +125,14 @@ export default function ProfesorHubCursos() {
   const [editMonthlyPrice, setEditMonthlyPrice] = useState("");
   const [editHasAnnual, setEditHasAnnual] = useState(false);
   const [editAnnualPrice, setEditAnnualPrice] = useState("");
+  const [editThumbnailUrl, setEditThumbnailUrl] = useState("");
+  const [isUploadingThumb, setIsUploadingThumb] = useState(false);
 
   useEffect(() => {
     if (editingCourse) {
       setEditCourseName(editingCourse.title);
       setEditCourseDesc(editingCourse.description || "");
+      setEditThumbnailUrl(editingCourse.thumbnail_url || "");
       const prices = getPricing(editingCourse.id);
       const oneTime = prices.find((p: any) => p.type === 'one-time');
       const monthly = prices.find((p: any) => p.type === 'monthly');
@@ -116,8 +143,73 @@ export default function ProfesorHubCursos() {
       setEditMonthlyPrice(monthly ? String(monthly.price) : "");
       setEditHasAnnual(!!annual);
       setEditAnnualPrice(annual ? String(annual.price) : "");
+      setEditActiveTab("global");
     }
   }, [editingCourse]);
+
+  const checkUnsavedEditChanges = () => {
+    if (!editingCourse) return false;
+    const globalChanged = editCourseName !== editingCourse.title ||
+                          editCourseDesc !== (editingCourse.description || "") ||
+                          editThumbnailUrl !== (editingCourse.thumbnail_url || "");
+    
+    const originalPrices = getPricing(editingCourse.id);
+    const origOneTime = originalPrices.find((p: any) => p.type === 'one-time');
+    const origMonthly = originalPrices.find((p: any) => p.type === 'monthly');
+    const origAnnual = originalPrices.find((p: any) => p.type === 'annual');
+
+    const pricesChanged = 
+      editHasLifetime !== !!origOneTime ||
+      (editHasLifetime && editLifetimePrice !== (origOneTime?.price?.toString() || "")) ||
+      editHasMonthly !== !!origMonthly ||
+      (editHasMonthly && editMonthlyPrice !== (origMonthly?.price?.toString() || "")) ||
+      editHasAnnual !== !!origAnnual ||
+      (editHasAnnual && editAnnualPrice !== (origAnnual?.price?.toString() || ""));
+
+    return globalChanged || pricesChanged;
+  };
+
+  const handleEditTabChange = (value: string) => {
+    if (checkUnsavedEditChanges()) {
+      toast.error("Guarda los cambios antes de cambiar de pestaña");
+    } else {
+      setEditActiveTab(value);
+    }
+  };
+
+  const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Solo se permiten archivos de imagen.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen supera el límite de 5MB");
+      return;
+    }
+
+    setIsUploadingThumb(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `thumb_${Date.now()}.${fileExt}`;
+    const filePath = `${hub?.profesor_id}/${editingCourse?.id}/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage.from('courses').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('courses').getPublicUrl(filePath);
+      setEditThumbnailUrl(data.publicUrl);
+      toast.success("Miniatura subida correctamente.");
+    } catch (error: any) {
+      toast.error(`Error al subir imagen: ${error.message}`);
+    } finally {
+      setIsUploadingThumb(false);
+      event.target.value = "";
+    }
+  };
 
   const [isEditing, setIsEditing] = useState(false);
   const handleEditCourse = async () => {
@@ -126,10 +218,11 @@ export default function ProfesorHubCursos() {
     
     setIsEditing(true);
 
-    // 1. Update course title/description
+    // 1. Update course title/description/thumbnail
     const { error } = await supabase.from('courses').update({
       title: editCourseName,
-      description: editCourseDesc
+      description: editCourseDesc,
+      thumbnail_url: editThumbnailUrl || null
     }).eq('id', editingCourse.id);
 
     if (error) { toast.error(error.message); setIsEditing(false); return; }
@@ -186,8 +279,14 @@ export default function ProfesorHubCursos() {
                   Añade un nuevo curso a {hub.name}. Define los detalles básicos iniciales.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
-                <div className="space-y-2">
+              <Tabs value={createActiveTab} onValueChange={setCreateActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="global">Configuración Global</TabsTrigger>
+                  <TabsTrigger value="prices">Precios</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="global" className="grid gap-4 py-2 max-h-[50vh] overflow-y-auto px-1">
+                  <div className="space-y-2">
                   <Label htmlFor="title">Nombre del curso</Label>
                   <Input 
                     id="title" 
@@ -207,7 +306,58 @@ export default function ProfesorHubCursos() {
                   />
                 </div>
                 
-                <div className="pt-2 border-t space-y-4">
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-2">Imagen de Portada / Mockup (Opcional)</Label>
+                  {!newThumbnailPreview ? (
+                    <>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        id="new-thumb-upload" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (!file.type.startsWith("image/")) { toast.error("Solo se permiten archivos de imagen."); return; }
+                          if (file.size > 5 * 1024 * 1024) { toast.error("La imagen supera el límite de 5MB"); return; }
+                          setNewThumbnailFile(file);
+                          setNewThumbnailPreview(URL.createObjectURL(file));
+                          e.target.value = "";
+                        }}
+                      />
+                      <label 
+                        htmlFor="new-thumb-upload" 
+                        className="rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-6 text-center cursor-pointer group block"
+                      >
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <UploadCloud className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Subir Portada del Curso</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">Recomendado: 1280x720 (Máx. 5MB)</p>
+                          </div>
+                        </div>
+                      </label>
+                    </>
+                  ) : (
+                    <div className="relative group rounded-xl overflow-hidden border aspect-video w-full max-w-[280px]">
+                      <img src={newThumbnailPreview} alt="Portada Seleccionada" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button variant="destructive" size="icon" onClick={() => {
+                          setNewThumbnailFile(null);
+                          URL.revokeObjectURL(newThumbnailPreview);
+                          setNewThumbnailPreview("");
+                        }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+                
+              <TabsContent value="prices" className="py-2 max-h-[50vh] overflow-y-auto px-1 space-y-4">
                   <h4 className="text-sm font-semibold">Modos de Suscripción</h4>
                   
                   {/* ÚNICO PAGO */}
@@ -280,10 +430,16 @@ export default function ProfesorHubCursos() {
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
+                </TabsContent>
+              </Tabs>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                <Button variant="outline" onClick={() => {
+                  setIsDialogOpen(false);
+                  setNewThumbnailFile(null);
+                  if (newThumbnailPreview) URL.revokeObjectURL(newThumbnailPreview);
+                  setNewThumbnailPreview("");
+                  setCreateActiveTab("global");
+                }}>Cancelar</Button>
                 <Button onClick={handleCreateCourse} disabled={isCreating}>
                   {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {isCreating ? 'Guardando...' : 'Continuar'}
@@ -316,10 +472,10 @@ export default function ProfesorHubCursos() {
                   </div>
                   <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0 sm:flex-row shrink-0">
                     <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setEditingCourse(c)}>
-                      Editar Curso
+                      <Settings className="mr-1.5 h-3.5 w-3.5" />Configuración
                     </Button>
                     <Button size="sm" asChild className="w-full sm:w-auto">
-                      <Link to={`/dashboard/cursos/${c.id}`}>Editar Contenido</Link>
+                      <Link to={`/dashboard/cursos/${c.id}`}><Pencil className="mr-1.5 h-3.5 w-3.5" />Editar Contenido</Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -333,13 +489,20 @@ export default function ProfesorHubCursos() {
       <Dialog open={!!editingCourse} onOpenChange={(open) => !open && setEditingCourse(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Editar curso</DialogTitle>
+            <DialogTitle>Configuración del Curso</DialogTitle>
             <DialogDescription>
-              Modifica los detalles básicos y de suscripción del curso.
+              Modifica los detalles básicos, portada y suscripciones del curso.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
-            <div className="space-y-2">
+          
+          <Tabs value={editActiveTab} onValueChange={handleEditTabChange} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="global">Configuración Global</TabsTrigger>
+              <TabsTrigger value="prices">Precios</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="global" className="grid gap-4 py-2 max-h-[50vh] overflow-y-auto px-1">
+              <div className="space-y-2">
               <Label htmlFor="edit-title">Nombre del curso</Label>
               <Input 
                 id="edit-title" 
@@ -358,8 +521,47 @@ export default function ProfesorHubCursos() {
                 onChange={(e) => setEditCourseDesc(e.target.value)}
               />
             </div>
+            <div className="space-y-4">
+              <Label className="flex items-center gap-2">Imagen de Portada / Mockup</Label>
+              {!editThumbnailUrl ? (
+                <>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    id="edit-thumb-upload" 
+                    onChange={handleThumbnailUpload}
+                    disabled={isUploadingThumb}
+                  />
+                  <label 
+                    htmlFor="edit-thumb-upload" 
+                    className={`rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-6 text-center cursor-pointer group block ${isUploadingThumb ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        {isUploadingThumb ? <Loader2 className="h-5 w-5 text-primary animate-spin" /> : <UploadCloud className="h-5 w-5 text-primary" />}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{isUploadingThumb ? 'Subiendo...' : 'Subir Portada'}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Recomendado: 1280x720 (Máx. 5MB)</p>
+                      </div>
+                    </div>
+                  </label>
+                </>
+              ) : (
+                <div className="relative group rounded-xl overflow-hidden border aspect-video w-full max-w-[280px]">
+                  <img src={editThumbnailUrl} alt="Portada" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button variant="destructive" size="icon" onClick={() => setEditThumbnailUrl("")}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
             
-            <div className="pt-2 border-t space-y-4">
+          <TabsContent value="prices" className="py-2 max-h-[50vh] overflow-y-auto px-1 space-y-4">
               <h4 className="text-sm font-semibold">Modos de Suscripción</h4>
               
               {/* ÚNICO PAGO */}
@@ -432,8 +634,8 @@ export default function ProfesorHubCursos() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingCourse(null)}>Cancelar</Button>
             <Button onClick={handleEditCourse} disabled={isEditing}>

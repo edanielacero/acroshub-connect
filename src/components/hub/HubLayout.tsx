@@ -134,10 +134,15 @@ export function HubLayout() {
       <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            {hub.logo ? (
-              <img src={hub.logo} alt={hub.name} className="h-8 max-w-[150px] object-contain" />
+            {hub.logo_url ? (
+              <Link to={`/${slug}`} className="flex items-center gap-2 transition-opacity hover:opacity-80">
+                <img src={hub.logo_url} alt={hub.name} className="h-8 max-w-[150px] object-contain" />
+                <span className="font-bold text-base sm:text-xl hidden sm:inline-block truncate max-w-[200px]">{hub.name}</span>
+              </Link>
             ) : (
-              <span className="font-bold text-xl">{hub.name}</span>
+              <Link to={`/${slug}`} className="flex items-center gap-2 transition-opacity hover:opacity-80">
+                <span className="font-bold text-xl truncate max-w-[200px]">{hub.name}</span>
+              </Link>
             )}
           </div>
 

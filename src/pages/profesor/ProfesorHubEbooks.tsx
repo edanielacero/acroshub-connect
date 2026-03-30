@@ -6,10 +6,11 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Book, BookCopy, GripVertical, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Book, BookCopy, GripVertical, Plus, Loader2, UploadCloud, Trash2, Settings, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +42,8 @@ export default function ProfesorHubEbooks() {
   const [isCreating, setIsCreating] = useState(false);
   const [newEbookName, setNewEbookName] = useState("");
   const [newEbookDesc, setNewEbookDesc] = useState("");
+  const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
+  const [newCoverPreview, setNewCoverPreview] = useState("");
   const [hasLifetime, setHasLifetime] = useState(true);
   const [lifetimePrice, setLifetimePrice] = useState("");
   const [hasMonthly, setHasMonthly] = useState(false);
@@ -68,6 +71,20 @@ export default function ProfesorHubEbooks() {
       return;
     }
 
+    if (newCoverFile) {
+      const fileExt = newCoverFile.name.split('.').pop();
+      const fileName = `cover_${Date.now()}.${fileExt}`;
+      const filePath = `${user?.id}/${newEbook.id}/${fileName}`;
+      const { error: uploadError } = await supabase.storage.from('ebooks').upload(filePath, newCoverFile);
+      
+      if (!uploadError) {
+        const { data } = supabase.storage.from('ebooks').getPublicUrl(filePath);
+        await supabase.from('ebooks').update({ cover_url: data.publicUrl }).eq('id', newEbook.id);
+      } else {
+        toast.error("El ebook se creó pero hubo un error subiendo la portada.");
+      }
+    }
+
     const pricingOptions = [];
     if (hasLifetime) pricingOptions.push({ product_id: newEbook.id, product_type: 'ebook', type: 'one-time', price: Number(lifetimePrice)||0, currency: 'USD' });
     if (hasMonthly) pricingOptions.push({ product_id: newEbook.id, product_type: 'ebook', type: 'monthly', price: Number(monthlyPrice)||0, currency: 'USD' });
@@ -84,8 +101,12 @@ export default function ProfesorHubEbooks() {
     setHasMonthly(false); setMonthlyPrice("");
     setHasAnnual(false); setAnnualPrice("");
     setIsCreating(false);
+    setCreateActiveTab("global");
     navigate(`/dashboard/ebooks/${newEbook.id}`); 
   };
+
+  const [createActiveTab, setCreateActiveTab] = useState("global");
+  const [editActiveTab, setEditActiveTab] = useState("global");
 
   // --- EDIT EBOOK MODAL STATES ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,11 +119,14 @@ export default function ProfesorHubEbooks() {
   const [editMonthlyPrice, setEditMonthlyPrice] = useState("");
   const [editHasAnnual, setEditHasAnnual] = useState(false);
   const [editAnnualPrice, setEditAnnualPrice] = useState("");
+  const [editCoverUrl, setEditCoverUrl] = useState("");
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   useEffect(() => {
     if (editingEbook) {
       setEditEbookName(editingEbook.title);
       setEditEbookDesc(editingEbook.description || "");
+      setEditCoverUrl(editingEbook.cover_url || "");
       const prices = getPricing(editingEbook.id);
       const oneTime = prices.find((p: any) => p.type === 'one-time');
       const monthly = prices.find((p: any) => p.type === 'monthly');
@@ -113,8 +137,73 @@ export default function ProfesorHubEbooks() {
       setEditMonthlyPrice(monthly ? String(monthly.price) : "");
       setEditHasAnnual(!!annual);
       setEditAnnualPrice(annual ? String(annual.price) : "");
+      setEditActiveTab("global");
     }
   }, [editingEbook]);
+
+  const checkUnsavedEditChanges = () => {
+    if (!editingEbook) return false;
+    const globalChanged = editEbookName !== editingEbook.title ||
+                          editEbookDesc !== (editingEbook.description || "") ||
+                          editCoverUrl !== (editingEbook.cover_url || "");
+    
+    const originalPrices = getPricing(editingEbook.id);
+    const origOneTime = originalPrices.find((p: any) => p.type === 'one-time');
+    const origMonthly = originalPrices.find((p: any) => p.type === 'monthly');
+    const origAnnual = originalPrices.find((p: any) => p.type === 'annual');
+
+    const pricesChanged = 
+      editHasLifetime !== !!origOneTime ||
+      (editHasLifetime && editLifetimePrice !== (origOneTime?.price?.toString() || "")) ||
+      editHasMonthly !== !!origMonthly ||
+      (editHasMonthly && editMonthlyPrice !== (origMonthly?.price?.toString() || "")) ||
+      editHasAnnual !== !!origAnnual ||
+      (editHasAnnual && editAnnualPrice !== (origAnnual?.price?.toString() || ""));
+
+    return globalChanged || pricesChanged;
+  };
+
+  const handleEditTabChange = (value: string) => {
+    if (checkUnsavedEditChanges()) {
+      toast.error("Guarda los cambios antes de cambiar de pestaña");
+    } else {
+      setEditActiveTab(value);
+    }
+  };
+
+  const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Solo se permiten archivos de imagen.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen supera el límite de 5MB");
+      return;
+    }
+
+    setIsUploadingCover(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `cover_${Date.now()}.${fileExt}`;
+    const filePath = `${hub?.profesor_id}/${editingEbook?.id}/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage.from('ebooks').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('ebooks').getPublicUrl(filePath);
+      setEditCoverUrl(data.publicUrl);
+      toast.success("Portada subida correctamente.");
+    } catch (error: any) {
+      toast.error(`Error al subir imagen: ${error.message}`);
+    } finally {
+      setIsUploadingCover(false);
+      event.target.value = "";
+    }
+  };
 
   const [isEditing, setIsEditing] = useState(false);
   const handleEditEbook = async () => {
@@ -123,10 +212,11 @@ export default function ProfesorHubEbooks() {
     
     setIsEditing(true);
 
-    // 1. Update ebook title/description
+    // 1. Update ebook title/description/cover
     const { error } = await supabase.from('ebooks').update({
       title: editEbookName,
-      description: editEbookDesc
+      description: editEbookDesc,
+      cover_url: editCoverUrl || null
     }).eq('id', editingEbook.id);
 
     if (error) { toast.error(error.message); setIsEditing(false); return; }
@@ -183,8 +273,14 @@ export default function ProfesorHubEbooks() {
                   Añade un nuevo ebook a {hub.name}. Configura su nombre y los modos de suscripción.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
-                <div className="space-y-2">
+              <Tabs value={createActiveTab} onValueChange={setCreateActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="global">Configuración Global</TabsTrigger>
+                  <TabsTrigger value="prices">Precios</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="global" className="grid gap-4 py-2 max-h-[50vh] overflow-y-auto px-1">
+                  <div className="space-y-2">
                   <Label htmlFor="title">Nombre del ebook</Label>
                   <Input 
                     id="title" 
@@ -204,7 +300,58 @@ export default function ProfesorHubEbooks() {
                   />
                 </div>
                 
-                <div className="pt-2 border-t space-y-4">
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-2">Imagen de Portada / Mockup (Opcional)</Label>
+                  {!newCoverPreview ? (
+                    <>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        id="new-cover-upload" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (!file.type.startsWith("image/")) { toast.error("Solo se permiten archivos de imagen."); return; }
+                          if (file.size > 5 * 1024 * 1024) { toast.error("La imagen supera el límite de 5MB"); return; }
+                          setNewCoverFile(file);
+                          setNewCoverPreview(URL.createObjectURL(file));
+                          e.target.value = "";
+                        }}
+                      />
+                      <label 
+                        htmlFor="new-cover-upload" 
+                        className="rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-6 text-center cursor-pointer group block"
+                      >
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <UploadCloud className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Subir Portada del Ebook</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">Recomendado: 1280x720 (Máx. 5MB)</p>
+                          </div>
+                        </div>
+                      </label>
+                    </>
+                  ) : (
+                    <div className="relative group rounded-xl overflow-hidden border aspect-video w-full max-w-[280px]">
+                      <img src={newCoverPreview} alt="Portada Seleccionada" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button variant="destructive" size="icon" onClick={() => {
+                          setNewCoverFile(null);
+                          URL.revokeObjectURL(newCoverPreview);
+                          setNewCoverPreview("");
+                        }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="prices" className="py-2 max-h-[50vh] overflow-y-auto px-1 space-y-4">
                   <h4 className="text-sm font-semibold">Modos de Suscripción</h4>
                   
                   {/* ÚNICO PAGO */}
@@ -265,10 +412,16 @@ export default function ProfesorHubEbooks() {
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
+                </TabsContent>
+              </Tabs>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                <Button variant="outline" onClick={() => {
+                  setIsDialogOpen(false);
+                  setNewCoverFile(null);
+                  if (newCoverPreview) URL.revokeObjectURL(newCoverPreview);
+                  setNewCoverPreview("");
+                  setCreateActiveTab("global");
+                }}>Cancelar</Button>
                 <Button onClick={handleCreateEbook} disabled={isCreating}>
                   {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {isCreating ? 'Guardando...' : 'Continuar'}
@@ -301,10 +454,10 @@ export default function ProfesorHubEbooks() {
                   </div>
                   <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0 sm:flex-row shrink-0">
                     <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setEditingEbook(eb)}>
-                      Editar Ebook
+                      <Settings className="mr-1.5 h-3.5 w-3.5" />Configuración
                     </Button>
                     <Button size="sm" asChild className="w-full sm:w-auto">
-                      <Link to={`/dashboard/ebooks/${eb.id}`}>Editar Contenido</Link>
+                      <Link to={`/dashboard/ebooks/${eb.id}`}><Pencil className="mr-1.5 h-3.5 w-3.5" />Editar Contenido</Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -318,13 +471,20 @@ export default function ProfesorHubEbooks() {
       <Dialog open={!!editingEbook} onOpenChange={(open) => !open && setEditingEbook(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Editar Ebook</DialogTitle>
+            <DialogTitle>Configuración del Ebook</DialogTitle>
             <DialogDescription>
-              Modifica los detalles básicos y de suscripción del ebook.
+              Modifica los detalles básicos, portada y suscripciones del ebook.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
-            <div className="space-y-2">
+
+          <Tabs value={editActiveTab} onValueChange={handleEditTabChange} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="global">Configuración Global</TabsTrigger>
+              <TabsTrigger value="prices">Precios</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="global" className="grid gap-4 py-2 max-h-[50vh] overflow-y-auto px-1">
+              <div className="space-y-2">
               <Label htmlFor="edit-title">Nombre del Ebook</Label>
               <Input 
                 id="edit-title" 
@@ -344,7 +504,47 @@ export default function ProfesorHubEbooks() {
               />
             </div>
             
-            <div className="pt-2 border-t space-y-4">
+            <div className="space-y-4">
+              <Label className="flex items-center gap-2">Imagen de Portada / Mockup</Label>
+              {!editCoverUrl ? (
+                <>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    id="edit-cover-upload" 
+                    onChange={handleCoverUpload}
+                    disabled={isUploadingCover}
+                  />
+                  <label 
+                    htmlFor="edit-cover-upload" 
+                    className={`rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-6 text-center cursor-pointer group block ${isUploadingCover ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        {isUploadingCover ? <Loader2 className="h-5 w-5 text-primary animate-spin" /> : <UploadCloud className="h-5 w-5 text-primary" />}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{isUploadingCover ? 'Subiendo...' : 'Subir Portada'}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Recomendado: 1280x720 (Máx. 5MB)</p>
+                      </div>
+                    </div>
+                  </label>
+                </>
+              ) : (
+                <div className="relative group rounded-xl overflow-hidden border aspect-video w-full max-w-[280px]">
+                  <img src={editCoverUrl} alt="Portada" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button variant="destructive" size="icon" onClick={() => setEditCoverUrl("")}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="prices" className="py-2 max-h-[50vh] overflow-y-auto px-1 space-y-4">
               <h4 className="text-sm font-semibold">Modos de Suscripción</h4>
               
               {/* ÚNICO PAGO */}
@@ -405,8 +605,8 @@ export default function ProfesorHubEbooks() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingEbook(null)}>Cancelar</Button>
             <Button onClick={handleEditEbook} disabled={isEditing}>

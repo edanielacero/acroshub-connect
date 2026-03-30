@@ -80,8 +80,12 @@ export default function EbookDetalle() {
     return (
       <div className="animate-fade-in max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row gap-6 mb-8 items-center bg-card p-6 rounded-2xl border shadow-sm mt-4">
-          <div className="h-32 w-24 shrink-0 bg-green-100 rounded flex items-center justify-center border border-green-200">
-            <BookOpen className="h-10 w-10 text-green-600" />
+          <div className="h-32 w-24 shrink-0 bg-green-100 rounded flex items-center justify-center border border-green-200 overflow-hidden">
+            {ebook.cover_url ? (
+              <img src={ebook.cover_url} alt={ebook.title} className="w-full h-full object-cover" />
+            ) : (
+              <BookOpen className="h-10 w-10 text-green-600" />
+            )}
           </div>
           <div className="flex-1 text-center md:text-left">
             <Badge variant="outline" className="mb-2 text-green-600 border-green-600/20">{(ebook.format || 'PDF').toUpperCase()} E-Book</Badge>
@@ -127,7 +131,7 @@ export default function EbookDetalle() {
           <div className="mt-12 bg-card border rounded-2xl p-6 shadow-sm overflow-hidden flex flex-col items-center justify-center h-80 relative group">
              <div className="absolute inset-0 bg-slate-100" />
              <img 
-               src={`https://placehold.co/600x400/16a34a/ffffff?text=${encodeURIComponent(ebook.title)}`} 
+               src={ebook.cover_url || `https://placehold.co/600x400/16a34a/ffffff?text=${encodeURIComponent(ebook.title)}`} 
                alt={ebook.title} 
                className="w-full h-full object-cover relative z-10 rounded-xl max-w-sm shadow-xl mt-4 group-hover:scale-105 transition-transform duration-500"
              />

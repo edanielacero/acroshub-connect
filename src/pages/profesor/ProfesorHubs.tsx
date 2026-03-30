@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { FolderOpen, Plus, CheckCircle2, Loader2 } from "lucide-react";
+import { FolderOpen, Plus, CheckCircle2, Loader2, BookOpen, Book, Pencil, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -94,7 +94,10 @@ export default function ProfesorHubs() {
     <ProfesorLayout>
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold">Mis Academias</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Mis Academias</h1>
+            <p className="text-sm text-muted-foreground mt-1">Una Academia te permite agrupar varios Cursos y Ebooks de un mismo tema para ofrecerlos juntos a tus alumnos.</p>
+          </div>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Crear Academia</Button>
@@ -180,24 +183,39 @@ export default function ProfesorHubs() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {profHubs.map(hub => (
             <Card key={hub.id} className="overflow-hidden hover:shadow-md transition-shadow">
-              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                <FolderOpen className="h-14 w-14 text-primary/40" />
+              <div 
+                className="relative flex h-36 items-center justify-center overflow-hidden"
+                style={{
+                  background: hub.cover_url 
+                    ? undefined 
+                    : `linear-gradient(135deg, ${hub.primary_color || '#6366f1'}33 0%, ${hub.primary_color || '#6366f1'}11 100%)`
+                }}
+              >
+                {hub.cover_url ? (
+                  <img src={hub.cover_url} alt={hub.name} className="absolute inset-0 w-full h-full object-cover" />
+                ) : null}
+                <div className="absolute inset-0" style={{ background: hub.cover_url ? 'rgba(0,0,0,0.25)' : undefined }} />
+                {hub.logo_url ? (
+                  <img src={hub.logo_url} alt="Logo" className="relative z-10 h-14 w-14 rounded-full object-cover border-2 border-white/60 shadow-sm" />
+                ) : (
+                  <FolderOpen className="relative z-10 h-14 w-14" style={{ color: hub.primary_color ? `${hub.primary_color}99` : undefined }} />
+                )}
               </div>
               <CardContent className="p-4">
                 <h3 className="text-lg font-semibold">{hub.name}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{hub.description}</p>
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <Button variant="default" size="sm" asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
-                    <Link to={`/dashboard/hubs/${hub.id}/cursos`}>Cursos</Link>
+                    <Link to={`/dashboard/hubs/${hub.id}/cursos`}><BookOpen className="mr-1.5 h-3.5 w-3.5" />Cursos</Link>
                   </Button>
                   <Button variant="default" size="sm" asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
-                    <Link to={`/dashboard/hubs/${hub.id}/ebooks`}>Ebooks</Link>
+                    <Link to={`/dashboard/hubs/${hub.id}/ebooks`}><Book className="mr-1.5 h-3.5 w-3.5" />Ebooks</Link>
                   </Button>
                   <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link to={`/dashboard/hubs/${hub.id}`}>Editar Academia</Link>
+                    <Link to={`/dashboard/hubs/${hub.id}`}><Pencil className="mr-1.5 h-3.5 w-3.5" />Editar Academia</Link>
                   </Button>
-                  <Button variant="ghost" size="sm" className="w-full" onClick={() => handleViewAsStudent(hub)}>
-                    Ver como alumno
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => handleViewAsStudent(hub)}>
+                    <Eye className="mr-1.5 h-3.5 w-3.5" />Ver como alumno
                   </Button>
                 </div>
               </CardContent>

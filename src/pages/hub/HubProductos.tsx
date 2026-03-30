@@ -167,7 +167,7 @@ export default function HubProductos() {
                   <Card key={product.id} className="overflow-hidden hover:-translate-y-1 transition-transform hover:shadow-lg group flex flex-col">
                     <div className="h-40 bg-slate-100 relative overflow-hidden flex items-center justify-center">
                       <img
-                        src={`https://placehold.co/600x400/${isCourse ? '2563eb' : '16a34a'}/ffffff?text=${encodeURIComponent(product.title)}`}
+                        src={(isCourse ? product.thumbnail_url : product.cover_url) || `https://placehold.co/600x400/${isCourse ? '2563eb' : '16a34a'}/ffffff?text=${encodeURIComponent(product.title)}`}
                         alt={product.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
@@ -243,7 +243,7 @@ export default function HubProductos() {
                   <Card key={product.id} className="overflow-hidden hover:shadow-md transition-all group hover:-translate-y-1 bg-gradient-to-br from-card to-muted/5 border-muted flex flex-col">
                     <div className="h-36 bg-slate-100 flex items-center justify-center relative overflow-hidden">
                       <img
-                        src={`https://placehold.co/600x400/${isCourse ? '2563eb' : '16a34a'}/ffffff?text=${encodeURIComponent(product.title)}`}
+                        src={(isCourse ? product.thumbnail_url : product.cover_url) || `https://placehold.co/600x400/${isCourse ? '2563eb' : '16a34a'}/ffffff?text=${encodeURIComponent(product.title)}`}
                         alt={product.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
