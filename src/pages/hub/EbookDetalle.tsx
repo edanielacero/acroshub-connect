@@ -53,7 +53,7 @@ export default function EbookDetalle() {
 
   const defaultOption = data?.pricingOptions && data.pricingOptions.length > 0
     ? data.pricingOptions[0].id
-    : 'one_time';
+    : 'one-time';
 
   const [opcionSeleccionada, setOpcionSeleccionada] = useState(defaultOption);
 
@@ -149,18 +149,18 @@ export default function EbookDetalle() {
                       <RadioGroupItem value={option.id} id={option.id} className="mt-1" />
                       <Label htmlFor={option.id} className="flex-1 cursor-pointer">
                         <div className="font-semibold text-base">
-                          {option.type === 'one_time' ? 'Pago único' : option.type === 'monthly' ? 'Suscripción Mensual' : 'Suscripción Anual'}
+                          {option.type === 'one-time' ? 'Pago único' : option.type === 'monthly' ? 'Suscripción Mensual' : 'Suscripción Anual'}
                         </div>
                         <div className="text-3xl font-extrabold mt-1 text-green-600">
-                          ${option.price} <span className="text-sm font-normal text-muted-foreground">{ebook.currency || 'USD'}{option.type !== 'one_time' ? (option.type === 'monthly' ? '/mes' : '/año') : ''}</span>
+                          ${option.price} <span className="text-sm font-normal text-muted-foreground">{ebook.currency || 'USD'}{option.type !== 'one-time' ? (option.type === 'monthly' ? '/mes' : '/año') : ''}</span>
                         </div>
                       </Label>
                     </div>
                   ))
                 ) : (
                   <div className={`flex items-start space-x-3 border rounded-xl p-4 cursor-pointer transition-all border-green-600 bg-green-50 ring-1 ring-green-600`}>
-                    <RadioGroupItem value="one_time" id="one_time" className="mt-1" />
-                    <Label htmlFor="one_time" className="flex-1 cursor-pointer">
+                    <RadioGroupItem value="one-time" id="one-time" className="mt-1" />
+                    <Label htmlFor="one-time" className="flex-1 cursor-pointer">
                       <div className="font-semibold text-base">Contenido gratuito</div>
                       <div className="text-3xl font-extrabold mt-1 text-green-600">$0 <span className="text-sm font-normal text-muted-foreground">{ebook.currency || 'USD'}</span></div>
                       <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1">

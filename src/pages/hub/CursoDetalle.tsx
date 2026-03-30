@@ -173,14 +173,14 @@ export default function CursoDetalle() {
                       <RadioGroupItem value={option.id} id={option.id} className="mt-1" />
                       <Label htmlFor={option.id} className="flex-1 cursor-pointer">
                         <div className="font-semibold text-base">
-                          {option.type === 'one_time' ? 'Pago único' : option.type === 'monthly' ? 'Suscripción Mensual' : 'Suscripción Anual'}
+                          {option.type === 'one-time' ? 'Pago único' : option.type === 'monthly' ? 'Suscripción Mensual' : 'Suscripción Anual'}
                         </div>
                         <div className="text-3xl font-extrabold mt-1 text-primary">
-                          ${option.price} <span className="text-sm font-normal text-muted-foreground">{course.currency}{option.type !== 'one_time' ? (option.type === 'monthly' ? '/mes' : '/año') : ''}</span>
+                          ${option.price} <span className="text-sm font-normal text-muted-foreground">{course.currency}{option.type !== 'one-time' ? (option.type === 'monthly' ? '/mes' : '/año') : ''}</span>
                         </div>
                         <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
                           <CheckCircle className="h-3 w-3 text-green-500" /> 
-                          {option.type === 'one_time' ? 'Acceso de por vida' : 'Cancela cuando quieras'}
+                          {option.type === 'one-time' ? 'Acceso de por vida' : 'Cancela cuando quieras'}
                         </div>
                         {option.type === 'annual' && (
                           <Badge variant="secondary" className="mt-2 bg-green-100 text-green-700 hover:bg-green-100 font-medium border-green-200">Ahorras un 20%</Badge>
@@ -189,9 +189,9 @@ export default function CursoDetalle() {
                     </div>
                   ))
                 ) : (
-                  <div className={`flex items-start space-x-3 border rounded-xl p-4 cursor-pointer transition-all ${opcionSeleccionada === 'one_time' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50 border-muted-foreground/20'}`} onClick={() => setOpcionSeleccionada('one_time')}>
-                    <RadioGroupItem value="one_time" id="one_time" className="mt-1" />
-                    <Label htmlFor="one_time" className="flex-1 cursor-pointer">
+                  <div className={`flex items-start space-x-3 border rounded-xl p-4 cursor-pointer transition-all ${opcionSeleccionada === 'one-time' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50 border-muted-foreground/20'}`} onClick={() => setOpcionSeleccionada('one-time')}>
+                    <RadioGroupItem value="one-time" id="one-time" className="mt-1" />
+                    <Label htmlFor="one-time" className="flex-1 cursor-pointer">
                       {course.pricingOptions.length === 0 ? (
                         <div className="font-semibold text-base min-h-[4rem] flex flex-col justify-center text-muted-foreground">
                           Contenido gratuito

@@ -75,9 +75,6 @@ export default function LoginPage() {
           <p className="mt-4 text-center text-sm text-muted-foreground">
             ¿No tienes cuenta? <Link to="/register" className="font-medium text-primary hover:underline">Regístrate</Link>
           </p>
-          <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
-            <strong>Protegido por Supabase:</strong> Las cuentas demo locales ya no funcionan. Debes crear un usuario en el panel de Authentication de tu proyecto.
-          </div>
         </CardContent>
       </Card>
     </div>
