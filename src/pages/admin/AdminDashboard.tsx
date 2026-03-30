@@ -2,7 +2,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Users, UserCheck, GraduationCap, AlertTriangle, Clock, AlertCircle } from "lucide-react";
+import { Users, UserCheck, GraduationCap, AlertTriangle, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -11,26 +11,23 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { parseISO, differenceInDays } from "date-fns";
 import { formatDateProject } from "@/lib/utils";
 
-const planPrices = {
-  gratis: { mensual: 0, anual: 0 },
-  basico: { mensual: 30, anual: 300 },
-  pro: { mensual: 50, anual: 500 },
-  enterprise: { mensual: 100, anual: 1000 }
-};
-
 export default function AdminDashboard() {
   const [profesores, setProfesores] = useState<any[]>([]);
   const [alumnos, setAlumnos] = useState<any[]>([]);
+  const [planPrices, setPlanPrices] = useState<Record<string, { mensual: number; anual: number }>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const { data: profs } = await supabase.from('profiles').select('*').eq('role', 'profesor');
-        const { data: alums } = await supabase.from('profiles').select('*').eq('role', 'alumno');
+        const [profsRes, alumsRes, plansRes] = await Promise.all([
+          supabase.from('profiles').select('*').eq('role', 'profesor'),
+          supabase.from('profiles').select('*').eq('role', 'alumno'),
+          supabase.from('plan_configs').select('key, price, price_annual')
+        ]);
         
-        if (profs) {
-          setProfesores(profs.map(p => ({
+        if (profsRes.data) {
+          setProfesores(profsRes.data.map(p => ({
             ...p,
             name: p.full_name,
             currentPeriodEnd: p.current_period_end,
@@ -42,8 +39,12 @@ export default function AdminDashboard() {
           })));
         }
         
-        if (alums) {
-          setAlumnos(alums);
+        if (alumsRes.data) setAlumnos(alumsRes.data);
+        
+        if (plansRes.data) {
+          const prices: Record<string, { mensual: number; anual: number }> = {};
+          plansRes.data.forEach(p => { prices[p.key] = { mensual: p.price, anual: p.price_annual }; });
+          setPlanPrices(prices);
         }
       } catch (error) {
         console.error("Error fetching admin data:", error);
@@ -54,7 +55,7 @@ export default function AdminDashboard() {
     loadData();
   }, []);
 
-  if (loading) return <AdminLayout><div className="p-10 text-center animate-pulse">Cargando datos del dashboard...</div></AdminLayout>;
+  if (loading) return <AdminLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></AdminLayout>;
 
   const activeProfs = profesores.filter(p => p.status === 'activo');
 

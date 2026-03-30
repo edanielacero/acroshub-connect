@@ -1,10 +1,10 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, DollarSign, Search, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, DollarSign, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
+import { supabase } from "@/lib/supabase";
 
 const adminLinks = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -16,8 +16,27 @@ const adminLinks = [
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [adminName, setAdminName] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+        setAdminName(profile?.full_name || user.email?.split("@")[0] || "Admin");
+      }
+    }
+    loadUser();
+  }, []);
+
+  const initial = adminName ? adminName.charAt(0).toUpperCase() : "A";
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
   return (
     <div className="min-h-screen flex bg-muted/30">
@@ -52,29 +71,17 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex-1 min-w-0 flex justify-end px-4">
-            <div className="relative w-full max-w-sm hidden sm:block">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar alumnos o transacciones..."
-                className="w-full bg-muted/40 shadow-none appearance-none pl-8 md:w-[250px] lg:w-[350px]"
-              />
-            </div>
-            <Button variant="ghost" size="icon" className="sm:hidden ml-auto">
-              <Search className="h-5 w-5" />
-            </Button>
-          </div>
+          <div className="flex-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 px-2 sm:px-3 hover:bg-transparent hover:text-foreground">
-                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">D</div>
-                <span className="hidden sm:inline">Daniel</span>
+                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">{initial}</div>
+                <span className="hidden sm:inline">{adminName || "Admin"}</span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate('/')}>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />Cerrar sesión
               </DropdownMenuItem>
             </DropdownMenuContent>

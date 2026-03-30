@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { planConfigs } from "@/data/mockData";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,14 +10,33 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DollarSign, CalendarIcon } from "lucide-react";
-import { platformSubscriptions as initialSubscriptions, PlatformSubscription } from "@/data/mockData";
+import { DollarSign, CalendarIcon, Loader2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatDateProject } from "@/lib/utils";
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+
+interface PlatformSub {
+  id: string;
+  tenant_id: string;
+  type: string;
+  plan_from: string | null;
+  plan_to: string;
+  billing_cycle: string;
+  amount: number;
+  method: string;
+  notes: string | null;
+  created_at: string;
+}
+
+interface PlanConfig {
+  key: string;
+  name: string;
+  price: number;
+  price_annual: number;
+}
 
 const getTypeBadgeClass = (type: string) => {
   switch (type) {
@@ -41,38 +59,53 @@ const getTypeLabel = (type: string) => {
 };
 
 export default function AdminVentas() {
-  const [subs] = useState<PlatformSubscription[]>(initialSubscriptions);
+  const [subs, setSubs] = useState<PlatformSub[]>([]);
+  const [planConfigs, setPlanConfigs] = useState<PlanConfig[]>([]);
+  const [profesores, setProfesores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [filterPlan, setFilterPlan] = useState("todos");
   const [filterCycle, setFilterCycle] = useState("todos");
   const [filterType, setFilterType] = useState("todos");
   
   type DateFilterType = 'current_month' | 'all' | 'custom';
-  const [dateFilterType, setDateFilterType] = useState<DateFilterType>('current_month');
+  const [dateFilterType, setDateFilterType] = useState<DateFilterType>('all');
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [profesores, setProfesores] = useState<any[]>([]);
 
   useEffect(() => {
-    async function loadProf() {
-      const { data: profs } = await supabase.from('profiles').select('*').eq('role', 'profesor');
-      if (profs) setProfesores(profs.map(p => ({ ...p, name: p.full_name })));
+    async function loadData() {
+      try {
+        const [subsRes, profsRes, plansRes] = await Promise.all([
+          supabase.from('platform_subscriptions').select('*').order('created_at', { ascending: false }),
+          supabase.from('profiles').select('id, full_name').eq('role', 'profesor'),
+          supabase.from('plan_configs').select('key, name, price, price_annual').order('price', { ascending: true })
+        ]);
+        if (subsRes.data) setSubs(subsRes.data);
+        if (profsRes.data) setProfesores(profsRes.data.map(p => ({ ...p, name: p.full_name })));
+        if (plansRes.data) setPlanConfigs(plansRes.data);
+      } catch (e) {
+        console.error("Error loading ventas data:", e);
+      } finally {
+        setLoading(false);
+      }
     }
-    loadProf();
+    loadData();
   }, []);
 
   const filteredSubs = useMemo(() => {
     return subs.filter(s => {
-      if (s.type === 'downgrade' && s.amount === 0) return false;
+      if (s.type === 'downgrade' && Number(s.amount) === 0) return false;
 
-      const matchPlan = filterPlan === "todos" || s.planTo === filterPlan;
-      const matchCycle = filterCycle === "todos" || s.billingCycle === filterCycle;
+      const matchPlan = filterPlan === "todos" || s.plan_to === filterPlan;
+      const matchCycle = filterCycle === "todos" || s.billing_cycle === filterCycle;
       const matchType = filterType === "todos" || s.type === filterType;
       
       let matchDate = true;
-      const saleDate = parseISO(s.createdAt);
+      const saleDate = parseISO(s.created_at);
       
       if (dateFilterType === 'current_month') {
         const now = new Date();
@@ -89,11 +122,12 @@ export default function AdminVentas() {
     setCurrentPage(1);
   }, [filterPlan, filterCycle, filterType, dateFilterType, dateStart, dateEnd]);
 
-  const totalEarnings = filteredSubs.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalEarnings = filteredSubs.reduce((acc, curr) => acc + Number(curr.amount), 0);
 
   const chartData = useMemo(() => {
     const dataByDate = filteredSubs.reduce((acc, sub) => {
-      acc[sub.createdAt] = (acc[sub.createdAt] || 0) + sub.amount;
+      const dateKey = sub.created_at.split('T')[0];
+      acc[dateKey] = (acc[dateKey] || 0) + Number(sub.amount);
       return acc;
     }, {} as Record<string, number>);
 
@@ -110,10 +144,9 @@ export default function AdminVentas() {
     const firstPayments = filteredSubs.filter(s => s.type === 'first_payment');
     const renewals = filteredSubs.filter(s => s.type === 'renewal');
     const upgrades = filteredSubs.filter(s => s.type === 'upgrade');
-    // Para downgrades, contar todos (incluyendo los de $0 que normalmente se excluyen)
     const downgrades = subs.filter(s => {
       if (s.type !== 'downgrade') return false;
-      const saleDate = parseISO(s.createdAt);
+      const saleDate = parseISO(s.created_at);
       if (dateFilterType === 'current_month') {
         const now = new Date();
         return saleDate >= startOfMonth(now) && saleDate <= endOfMonth(now);
@@ -124,9 +157,9 @@ export default function AdminVentas() {
     });
 
     return {
-      firstPayments: { count: firstPayments.length, total: firstPayments.reduce((a, c) => a + c.amount, 0) },
-      renewals: { count: renewals.length, total: renewals.reduce((a, c) => a + c.amount, 0) },
-      upgrades: { count: upgrades.length, total: upgrades.reduce((a, c) => a + c.amount, 0) },
+      firstPayments: { count: firstPayments.length, total: firstPayments.reduce((a, c) => a + Number(c.amount), 0) },
+      renewals: { count: renewals.length, total: renewals.reduce((a, c) => a + Number(c.amount), 0) },
+      upgrades: { count: upgrades.length, total: upgrades.reduce((a, c) => a + Number(c.amount), 0) },
       downgrades: { count: downgrades.length }
     };
   }, [filteredSubs, subs, dateFilterType, dateStart, dateEnd]);
@@ -139,6 +172,14 @@ export default function AdminVentas() {
     if (dateStart && dateEnd) return `${dateStart} al ${dateEnd}`;
     return "Fechas personalizadas";
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -328,9 +369,9 @@ export default function AdminVentas() {
                 <TableBody>
                   {paginatedSubs.length > 0 ? paginatedSubs.map(s => (
                     <TableRow key={s.id}>
-                      <TableCell className="whitespace-nowrap">{formatDateProject(s.createdAt)}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatDateProject(s.created_at)}</TableCell>
                       <TableCell className="font-medium text-primary hover:underline cursor-pointer">
-                        <Link to={`/admin/profesores/${s.tenantId}`}>{getProfName(s.tenantId)}</Link>
+                        <Link to={`/admin/profesores/${s.tenant_id}`}>{getProfName(s.tenant_id)}</Link>
                       </TableCell>
                       <TableCell>
                         <Badge className={getTypeBadgeClass(s.type)}>
@@ -338,11 +379,11 @@ export default function AdminVentas() {
                         </Badge>
                       </TableCell>
                       <TableCell className="capitalize">
-                        {s.planFrom ? `${s.planFrom} → ${s.planTo}` : s.planTo}
+                        {s.plan_from ? `${s.plan_from} → ${s.plan_to}` : s.plan_to}
                       </TableCell>
-                      <TableCell className="capitalize">{s.billingCycle}</TableCell>
+                      <TableCell className="capitalize">{s.billing_cycle}</TableCell>
                       <TableCell className="capitalize">{s.method}</TableCell>
-                      <TableCell className="text-right font-medium text-success">${s.amount}</TableCell>
+                      <TableCell className="text-right font-medium text-success">${Number(s.amount).toFixed(2)}</TableCell>
                     </TableRow>
                   )) : (
                     <TableRow>
