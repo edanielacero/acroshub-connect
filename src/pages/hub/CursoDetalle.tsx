@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, Navigate, useOutletContext } from "react-router-dom";
-import { getCurrentAlumno, lessonProgress } from "@/data/mockData";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
 import { usePreview } from "@/components/layout/PreviewProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +50,7 @@ export default function CursoDetalle() {
   });
 
   const { demoMode, isOwner } = usePreview();
-  const alumno = getCurrentAlumno();
+  const { enrollments } = useAlumnoData();
   
   const defaultOption = course?.pricingOptions && course.pricingOptions.length > 0 
     ? course.pricingOptions[0].id 
@@ -63,32 +63,28 @@ export default function CursoDetalle() {
 
   const prof = course.prof;
 
-  const hasAccess = isOwner ? (demoMode === 'con-acceso') : alumno.purchasedCourses.includes(course.id);
+  const hasAccess = isOwner ? (demoMode === 'con-acceso') : enrollments.some(e => e.product_id === course.id && e.status === 'active');
   const modulosCount = course.modules.length;
-  const clasesCount = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+  const clasesCount = course.modules.reduce((acc: number, m: any) => acc + m.lessons.length, 0);
 
   // Helper metrics for access
-  const allLessonIds = course.modules.flatMap(m => m.lessons.map(l => l.id));
-  const completed = alumno.completedLessons.filter(lessonId => allLessonIds.includes(lessonId));
-  const progresoGeneral = clasesCount > 0 ? Math.round((completed.length / clasesCount) * 100) : 0;
+  const allLessonIds = course.modules.flatMap((m: any) => m.lessons.map((l: any) => l.id));
+  const completed: string[] = []; // Default empty until DB progress is implemented
+  const progresoGeneral = 0; // clasesCount > 0 ? Math.round((completed.length / clasesCount) * 100) : 0;
   
   const primeraClase = course.modules[0]?.lessons[0];
-  const ultimaClaseVistaId = lessonProgress
-    .filter(p => p.userId === alumno.id && allLessonIds.includes(p.lessonId))
-    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0]?.lessonId;
+  const ultimaClaseVistaId = null; // To implement in DB later
     
-  const ultimaClaseVista = ultimaClaseVistaId 
-    ? course.modules.flatMap(m => m.lessons).find(l => l.id === ultimaClaseVistaId) 
-    : undefined;
+  const ultimaClaseVista =  undefined;
 
-  const claseCompletada = (lessonId: string) => alumno.completedLessons.includes(lessonId);
+  const claseCompletada = (lessonId: string) => completed.includes(lessonId);
 
-  const isManualPayment = !prof?.stripeConnected && !!prof?.manualPaymentLink;
-  const isUnavailable = !prof?.stripeConnected && !prof?.manualPaymentLink;
+  const isManualPayment = !prof?.stripe_connected && !!prof?.manual_payment_link;
+  const isUnavailable = !prof?.stripe_connected && !prof?.manual_payment_link;
 
   const handleComprar = () => {
-    if (isManualPayment && prof?.manualPaymentLink) {
-      window.open(prof.manualPaymentLink, '_blank');
+    if (isManualPayment && prof?.manual_payment_link) {
+      window.open(prof.manual_payment_link, '_blank');
     } else {
       toast.error("Venta automática no disponible temporalmente.");
     }
@@ -122,7 +118,7 @@ export default function CursoDetalle() {
               Contenido del curso
             </h2>
             <Accordion type="multiple" className="space-y-3" defaultValue={[course.modules[0]?.id]}>
-              {course.modules.map(modulo => (
+              {course.modules.map((modulo: any) => (
                 <AccordionItem value={modulo.id} key={modulo.id} className="border px-4 py-1 rounded-xl bg-muted/10">
                   <AccordionTrigger className="hover:no-underline rounded-lg transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-left">
@@ -134,7 +130,7 @@ export default function CursoDetalle() {
                   </AccordionTrigger>
                   <AccordionContent className="pt-2 pb-4">
                     <ul className="space-y-2 mt-2">
-                      {modulo.lessons.map(clase => (
+                      {modulo.lessons.map((clase: any) => (
                         <li key={clase.id} className="flex items-center gap-3 text-sm p-3 rounded-lg bg-background border shadow-sm">
                           {clase.is_free_preview ? (
                             <Link to={`/${hub.slug}/clase/${clase.id}`} className="flex items-center gap-3 text-primary font-medium hover:underline flex-1">

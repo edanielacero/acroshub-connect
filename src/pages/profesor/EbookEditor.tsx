@@ -12,6 +12,13 @@ import { ArrowLeft, Book, UploadCloud, FileText, Trash2, AlertTriangle, Loader2 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { pdfjs } from "react-pdf";
+
+// Setup pdfjs worker if not already setup (to safely parse PDFs)
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 
 
@@ -27,6 +34,7 @@ export default function EbookEditor() {
   const [ebookDescription, setEbookDescription] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<{name: string, size: string}[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string>("");
+  const [pdfPages, setPdfPages] = useState<number | null>(null);
   
   useEffect(() => {
     if (ebook) {
@@ -36,6 +44,9 @@ export default function EbookEditor() {
          setPdfUrl(ebook.pdf_url);
          const fileName = ebook.pdf_url.split('/').pop() || 'documento.pdf';
          setAttachedFiles([{ name: fileName, size: 'PDF Guardado' }]);
+      }
+      if (ebook.pages) {
+        setPdfPages(ebook.pages);
       }
     }
   }, [ebook]);
@@ -71,7 +82,8 @@ export default function EbookEditor() {
     const { error } = await supabase.from('ebooks').update({
       title: ebookTitle,
       description: ebookDescription,
-      pdf_url: pdfUrl || null
+      pdf_url: pdfUrl || null,
+      pages: pdfPages
     }).eq('id', ebook.id);
     setIsSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -112,9 +124,20 @@ export default function EbookEditor() {
 
       const { data } = supabase.storage.from('ebooks').getPublicUrl(filePath);
       
+      // Calculate page count using pdfjs
+      let pages = null;
+      try {
+        const buffer = await file.arrayBuffer();
+        const pdf = await pdfjs.getDocument(buffer).promise;
+        pages = pdf.numPages;
+        setPdfPages(pages);
+      } catch (err) {
+        console.error("Error validando PDF:", err);
+      }
+      
       setPdfUrl(data.publicUrl);
       setAttachedFiles([{ name: file.name, size: (file.size / (1024 * 1024)).toFixed(2) + " MB" }]);
-      toast.success("Archivo PDF subido. No olvides Guardar el Ebook.");
+      toast.success(`Archivo PDF subido correctamente${pages ? ` (${pages} páginas)` : ''}. No olvides Guardar el Ebook.`);
     } catch (error: any) {
       toast.error(`Error al subir archivo: ${error.message}`);
     } finally {
@@ -126,6 +149,7 @@ export default function EbookEditor() {
   const handleRemoveFile = () => {
     setAttachedFiles([]);
     setPdfUrl("");
+    setPdfPages(null);
   };
 
   if (isLoading) return <ProfesorLayout><div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></ProfesorLayout>;

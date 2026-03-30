@@ -1,8 +1,9 @@
-import { useParams, Outlet, Link, useLocation } from "react-router-dom";
-import { getCurrentAlumno } from "@/data/mockData";
+import { useParams, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, LogOut, ArrowLeft, Loader2, Eye } from "lucide-react";
+import { User, LogOut, ArrowLeft, Loader2, Eye, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { usePreview } from "@/components/layout/PreviewProvider";
@@ -31,6 +32,7 @@ function hexToHSL(hex: string) {
 export function HubLayout() {
   const { slug } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   
   const { data: hub, isLoading: isHubLoading } = useQuery({
     queryKey: ['hub', slug],
@@ -46,10 +48,15 @@ export function HubLayout() {
     enabled: !!slug
   });
   
-  // En escenario real, este estado provendría de contexto de Auth
-  const user = getCurrentAlumno();
-  const isAuthenticated = true; 
+  const { user, signOut } = useAuth();
+  const isAuthenticated = !!user;
+  const { profile } = useAlumnoData();
   const { demoMode, setDemoMode, isOwner } = usePreview();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   if (isHubLoading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -61,17 +68,18 @@ export function HubLayout() {
 
   // Lógica jerárquica para el botón de regresar
   let backLink = "/mi-cuenta";
-  let backText = "Volver a mis academias";
+  let backText = "Volver al Inicio";
 
   if (location.pathname.includes('/clase/') || location.pathname.includes('/curso/') || location.pathname.includes('/ebook/')) {
     backLink = `/${hub.slug}/productos`;
     backText = `Volver a ${hub.name}`;
   } else if (location.pathname.endsWith('/productos') || location.pathname === `/${hub.slug}`) {
     backLink = "/mi-cuenta";
-    backText = "Volver a mis academias";
+    backText = "Volver al Inicio";
   }
 
   const navLinkClass = (path: string) => `text-sm font-medium transition-colors hover:text-primary ${location.pathname.endsWith(path) ? 'text-primary' : 'text-muted-foreground'}`;
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Usuario';
 
   return (
     <div className={`min-h-screen flex flex-col transition-all duration-300 ${isOwner ? 'lg:pl-64' : ''}`} style={{ 
@@ -138,25 +146,26 @@ export function HubLayout() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 hover:bg-transparent hover:text-foreground">
-                    <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-4 w-4 text-primary" />
+                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">
+                      {displayName.charAt(0).toUpperCase()}
                     </div>
-                    <span className="hidden sm:inline-block truncate max-w-[120px]">{user.name}</span>
+                    <span className="hidden sm:inline-block truncate max-w-[120px]">{displayName}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link to="/mi-cuenta">Mi cuenta</Link>
+                    <Link to="/mi-cuenta">Ir al Inicio</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/mis-ajustes">Mis ajustes</Link>
+                    <Link to="/mis-ajustes">Mi perfil</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/mis-pagos">Facturación</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                     <Link to="/"><LogOut className="mr-2 h-4 w-4" /> Cerrar sesión</Link>
+                  <DropdownMenuItem onClick={handleLogout}>
+                     <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -171,20 +180,18 @@ export function HubLayout() {
       </header>
 
       {/* Barra secundaria de navegación (Jerárquica) */}
-      {backLink !== '/mi-cuenta' && (
-        <div className="bg-muted/30 border-b">
-          <div className="container mx-auto px-4 sm:px-6 h-10 flex items-center">
-            <Link to={backLink} className="text-sm font-medium text-muted-foreground hover:text-primary flex items-center gap-2 transition-colors">
-              <ArrowLeft className="h-4 w-4" />
-              {backText}
-            </Link>
-          </div>
+      <div className="bg-muted/30 border-b">
+        <div className="container mx-auto px-4 sm:px-6 h-10 flex items-center">
+          <Link to={backLink} className="text-sm font-medium text-muted-foreground hover:text-primary flex items-center gap-2 transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            {backText}
+          </Link>
         </div>
-      )}
+      </div>
 
-        <main className="flex-1 animate-fade-in relative pt-4">
-          <Outlet context={{ hub }} />
-        </main>
+      <main className="flex-1 animate-fade-in relative pt-4">
+        <Outlet context={{ hub }} />
+      </main>
 
       <footer className="border-t py-6 text-center text-sm text-muted-foreground bg-background">
         Powered by Acroshub

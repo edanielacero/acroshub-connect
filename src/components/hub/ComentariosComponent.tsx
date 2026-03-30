@@ -1,67 +1,131 @@
 import { useState } from "react";
-import { comments as mockComments, getCurrentAlumno } from "@/data/mockData";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { getRelativeTime } from "@/data/mockData";
 import { toast } from "sonner";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
 
 interface Props {
   lessonId: string;
 }
 
+export function getRelativeTime(dateStr: string) {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return `hace ${diffInSeconds} segundos`;
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `hace ${diffInMinutes} min`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `hace ${diffInHours} horas`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) return 'ayer';
+  if (diffInDays < 30) return `hace ${diffInDays} días`;
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) return `hace ${diffInMonths} meses`;
+  return `hace ${Math.floor(diffInMonths / 12)} años`;
+}
+
 export function ComentariosComponent({ lessonId }: Props) {
-  const user = getCurrentAlumno();
+  const { profile } = useAlumnoData();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  const userName = profile?.full_name || profile?.name || user?.email || 'Alumno';
+  const userId = profile?.id || user?.id;
+  const avatarUrl = user?.user_metadata?.avatar_url || (profile as any)?.avatar_url;
+  
   const [nuevoComentario, setNuevoComentario] = useState('');
   const [respondiendo, setRespondiendo] = useState<string | null>(null);
-  const [comentariosLista, setComentariosLista] = useState(mockComments.filter(c => c.lessonId === lessonId));
+
+  // Fetch comments
+  const { data: commentsData, isLoading } = useQuery({
+    queryKey: ['comments', lessonId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('comments')
+        .select(`
+          id, text, created_at, parent_id, is_read,
+          profiles:user_id ( id, full_name, name, avatar_url, email )
+        `)
+        .eq('lesson_id', lessonId)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const comentariosLista = commentsData?.map(c => {
+    const p = c.profiles as any;
+    return {
+      id: c.id,
+      lessonId,
+      userId: p?.id || 'unknown',
+      userName: p?.full_name || p?.name || p?.email || 'Usuario',
+      avatarUrl: p?.avatar_url,
+      text: c.text,
+      createdAt: c.created_at,
+      parentId: c.parent_id,
+      isRead: c.is_read
+    };
+  }) || [];
   
-  // Agrupar respuestas
   const comentariosPrincipales = comentariosLista.filter(c => !c.parentId);
-  
+
+  // Mutations
+  const { mutate: agregarComentario, isPending: isSubmitting } = useMutation({
+    mutationFn: async ({ text, parentId }: { text: string; parentId?: string }) => {
+      if (!userId) throw new Error("Debes iniciar sesión para comentar");
+      const { error } = await supabase.from('comments').insert({
+        lesson_id: lessonId,
+        user_id: userId,
+        text,
+        parent_id: parentId || null
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', lessonId] });
+      queryClient.invalidateQueries({ queryKey: ['claseReproductor', lessonId] });
+      setNuevoComentario('');
+      setRespondiendo(null);
+      toast.success("Comentario publicado");
+    },
+    onError: (err: any) => toast.error(`Error: ${err.message}`)
+  });
+
   const handleEnviarComentario = () => {
     if (!nuevoComentario.trim()) return;
-    const newComment = {
-      id: `com-new-${Date.now()}`,
-      lessonId,
-      userId: user.id,
-      userName: user.name,
-      text: nuevoComentario,
-      createdAt: new Date().toISOString(),
-      isRead: true,
-    };
-    setComentariosLista([newComment, ...comentariosLista]);
-    setNuevoComentario('');
-    toast.success("Comentario publicado");
+    agregarComentario({ text: nuevoComentario });
   };
 
   const handleEnviarRespuesta = (parentId: string, indexStr: string) => {
-    const texto = (document.getElementById(`reply-input-${indexStr}`) as HTMLTextAreaElement)?.value;
-    if (!texto?.trim()) return;
-    
-    const newReply = {
-      id: `reply-new-${Date.now()}`,
-      lessonId,
-      userId: user.id,
-      userName: user.name,
-      text: texto,
-      createdAt: new Date().toISOString(),
-      parentId,
-      isRead: true,
-    };
-    
-    setComentariosLista([...comentariosLista, newReply]);
-    setRespondiendo(null);
-    toast.success("Respuesta publicada");
+    const text = (document.getElementById(`reply-input-${indexStr}`) as HTMLTextAreaElement)?.value;
+    if (!text?.trim()) return;
+    agregarComentario({ text, parentId });
   };
   
+  if (isLoading) {
+    return <div className="py-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
   return (
     <div className="space-y-8 max-w-3xl">
       {/* Formulario para nuevo comentario */}
       <div className="flex gap-4">
-        <Avatar className="h-10 w-10 border bg-muted">
-          <AvatarFallback className="text-primary font-bold bg-primary/10">{user.name.charAt(0)}</AvatarFallback>
+        <Avatar className="h-10 w-10 border bg-muted overflow-hidden">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={userName} className="h-full w-full object-cover" />
+          ) : (
+            <AvatarFallback className="text-primary font-bold bg-primary/10">{userName.charAt(0).toUpperCase()}</AvatarFallback>
+          )}
         </Avatar>
         <div className="flex-1">
           <Textarea 
@@ -70,15 +134,16 @@ export function ComentariosComponent({ lessonId }: Props) {
             onChange={(e) => setNuevoComentario(e.target.value)}
             rows={3}
             className="resize-none bg-background focus-visible:ring-primary/20"
+            disabled={isSubmitting}
           />
           <div className="flex justify-end mt-2">
             <Button 
               size="sm" 
               onClick={handleEnviarComentario}
-              disabled={!nuevoComentario.trim()}
+              disabled={!nuevoComentario.trim() || isSubmitting}
               className="px-6 font-semibold shadow-sm"
             >
-              Publicar
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Publicar"}
             </Button>
           </div>
         </div>
@@ -87,14 +152,19 @@ export function ComentariosComponent({ lessonId }: Props) {
       {/* Lista de comentarios */}
       <div className="space-y-6">
         {comentariosPrincipales.map((comentario, i) => {
-            const respuestas = comentariosLista.filter(r => r.parentId === comentario.id);
+            // Respuestas en orden cronológico (más antiguo primero)
+            const respuestas = comentariosLista.filter(r => r.parentId === comentario.id).sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
             const indexStr = i.toString();
             return (
           <div key={comentario.id} className="space-y-4">
             {/* Comentario principal */}
             <div className="flex gap-4">
-              <Avatar className="h-10 w-10 border bg-card">
-                <AvatarFallback className="font-semibold">{comentario.userName.charAt(0)}</AvatarFallback>
+              <Avatar className="h-10 w-10 border bg-card overflow-hidden">
+                {comentario.avatarUrl ? (
+                    <img src={comentario.avatarUrl} alt={comentario.userName} className="h-full w-full object-cover" />
+                ) : (
+                    <AvatarFallback className="font-semibold">{comentario.userName.charAt(0).toUpperCase()}</AvatarFallback>
+                )}
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
@@ -121,11 +191,15 @@ export function ComentariosComponent({ lessonId }: Props) {
             {respuestas.length > 0 && (
                 <div className="ml-14 space-y-4 pl-4 border-l-2 border-muted">
                     {respuestas.map(respuesta => {
-                        const isProfesor = respuesta.userId.startsWith('prof-');
+                        const isProfesor = respuesta.userId.includes('prof-'); // Temporal logic if you mix prof/alumno ids, otherwise just a visual detail.
                         return (
                         <div key={respuesta.id} className="flex gap-3">
-                            <Avatar className="h-8 w-8 border bg-card">
-                                <AvatarFallback className="text-xs">{respuesta.userName.charAt(0)}</AvatarFallback>
+                            <Avatar className="h-8 w-8 border bg-card overflow-hidden">
+                                {respuesta.avatarUrl ? (
+                                    <img src={respuesta.avatarUrl} alt={respuesta.userName} className="h-full w-full object-cover" />
+                                ) : (
+                                    <AvatarFallback className="text-xs">{respuesta.userName.charAt(0).toUpperCase()}</AvatarFallback>
+                                )}
                             </Avatar>
                             <div className="flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
@@ -147,8 +221,12 @@ export function ComentariosComponent({ lessonId }: Props) {
             {/* Formulario de respuesta */}
             {respondiendo === comentario.id && (
               <div className="flex gap-3 ml-14 mt-2">
-                <Avatar className="h-8 w-8 border bg-muted">
-                  <AvatarFallback className="text-primary text-xs bg-primary/10">{user.name.charAt(0)}</AvatarFallback>
+                <Avatar className="h-8 w-8 border bg-muted overflow-hidden">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={userName} className="h-full w-full object-cover" />
+                  ) : (
+                    <AvatarFallback className="text-primary text-xs bg-primary/10">{userName.charAt(0).toUpperCase()}</AvatarFallback>
+                  )}
                 </Avatar>
                 <div className="flex-1 flex flex-col items-end gap-2">
                   <Textarea 
@@ -157,13 +235,14 @@ export function ComentariosComponent({ lessonId }: Props) {
                     rows={2}
                     className="resize-none text-sm bg-background border-primary/20 focus-visible:ring-primary/20"
                     autoFocus
+                    disabled={isSubmitting}
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setRespondiendo(null)}>
+                    <Button size="sm" variant="ghost" onClick={() => setRespondiendo(null)} disabled={isSubmitting}>
                       Cancelar
                     </Button>
-                    <Button size="sm" onClick={() => handleEnviarRespuesta(comentario.id, indexStr)}>
-                      Responder
+                    <Button size="sm" onClick={() => handleEnviarRespuesta(comentario.id, indexStr)} disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Responder"}
                     </Button>
                   </div>
                 </div>

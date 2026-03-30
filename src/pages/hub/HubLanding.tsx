@@ -1,16 +1,16 @@
 import { Link, useOutletContext } from "react-router-dom";
-import { getCurrentAlumno } from "@/data/mockData";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
 import { usePreview } from "@/components/layout/PreviewProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FolderOpen, PlayCircle, Loader2 } from "lucide-react";
+import { FolderOpen, PlayCircle, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 export default function HubLanding() {
   const { hub } = useOutletContext<{ hub: any }>();
   const { demoMode, isOwner } = usePreview();
-  const alumno = getCurrentAlumno();
+  const { enrollments } = useAlumnoData();
 
   const { data: hubCourses = [], isLoading } = useQuery({
     queryKey: ['hubCourses', hub?.id],
@@ -60,7 +60,7 @@ export default function HubLanding() {
           <h2 className="text-2xl font-bold mb-8 text-center sm:text-left">Cursos Destacados</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {productosDestacados.map(course => {
-              const hasCourse = isOwner ? (demoMode === 'con-acceso') : alumno.purchasedCourses.includes(course.id);
+              const hasCourse = isOwner ? (demoMode === 'con-acceso') : enrollments.some(e => e.product_id === course.id && e.status === 'active');
               
               return (
               <Card key={course.id} className="overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1">

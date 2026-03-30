@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate, useLocation, useOutletContext } from "react-router-dom";
-import { getCurrentAlumno } from "@/data/mockData";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
 import { usePreview } from "@/components/layout/PreviewProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -11,18 +11,22 @@ import { PlayCircle, CheckCircle, Circle, ChevronLeft, ChevronRight, FileText, D
 import { ComentariosComponent } from "@/components/hub/ComentariosComponent";
 import { QuizComponent } from "@/components/hub/QuizComponent";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ClaseReproductor() {
   const { hub } = useOutletContext<{ hub: any }>();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   
   const { data: routeData, isLoading } = useQuery({
-    queryKey: ['claseReproductor', id],
+    queryKey: ['claseReproductor', id, user?.id],
     queryFn: async () => {
+      //... (queryFn remains the same)
       if (!id) return null;
       
       const { data: cLesson, error: lErr } = await supabase.from('lessons').select('*').eq('id', id).single();
@@ -36,6 +40,20 @@ export default function ClaseReproductor() {
 
       // GET QUIZ QUESTIONS!
       const { data: qData } = await supabase.from('quiz_questions').select('*').eq('lesson_id', id).order('order_index');
+
+      // GET COMMENT COUNT
+      const { count: cCount } = await supabase.from('comments').select('*', { count: 'exact', head: true }).eq('lesson_id', id);
+
+      // GET PROGRESS
+      let progress = null;
+      if (user?.id) {
+        const { data: pData } = await supabase.from('lesson_progress')
+          .select('*')
+          .eq('lesson_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        progress = pData;
+      }
 
       const { data: allModules } = await supabase.from('modules').select('*').eq('course_id', cCourse.id).order('order_index');
       const { data: allLessons } = await supabase.from('lessons').select('*').in('module_id', allModules?.map(m => m.id) || []).order('order_index');
@@ -56,14 +74,13 @@ export default function ClaseReproductor() {
         } : null
       };
 
-      return { clase: finalLesson, modulo: cModule, course: courseWithModules };
+      return { clase: finalLesson, modulo: cModule, course: courseWithModules, commentCount: cCount || 0, progress };
     },
     enabled: !!id
   });
   
   const { demoMode, isOwner } = usePreview();
-  const alumno = getCurrentAlumno();
-  const [completada, setCompletada] = useState(alumno.completedLessons.includes(id || ""));
+  const { enrollments } = useAlumnoData();
   const [activeTab, setActiveTab] = useState("descripcion");
 
   // Handle URL hash for auto tab selection (e.g. #comentarios)
@@ -77,15 +94,45 @@ export default function ClaseReproductor() {
     }
   }, [location.hash, id]);
 
+  const { mutate: mtMarcarCompletada, isPending: isMarking } = useMutation({
+    mutationFn: async (quizScore: number | null = null) => {
+      if (!user?.id) throw new Error("Debes iniciar sesión");
+      const { error } = await supabase.from('lesson_progress').upsert({
+        lesson_id: id,
+        user_id: user.id,
+        completed: true,
+        quiz_score: quizScore !== null ? quizScore : undefined
+      }, { onConflict: 'user_id, lesson_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['claseReproductor', id] });
+      toast.success("¡Clase completada!");
+      if (routeData) {
+        const { course, clase } = routeData;
+        const allLessonsFlat = course.modules.flatMap((m: any) => m.lessons);
+        const currentIndex = allLessonsFlat.findIndex((l: any) => l.id === clase.id);
+        const claseNext = currentIndex < allLessonsFlat.length - 1 ? allLessonsFlat[currentIndex + 1] : null;
+        const hasAccessNow = isOwner ? (demoMode === 'con-acceso') : enrollments.some(e => e.product_id === course.id && e.status === 'active');
+        
+        if (claseNext && !claseNext.is_free_preview && !hasAccessNow) {
+          toast.info("La siguiente clase es premium");
+        }
+      }
+    },
+    onError: (err: any) => toast.error(`Error al guardar: ${err.message}`)
+  });
+
   if (isLoading) return <div className="min-h-screen flex justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
   
   if (!hub || !routeData) {
     return <div className="p-8 text-center">Clase no encontrada</div>;
   }
   
-  const { clase, modulo, course } = routeData;
+  const { clase, modulo, course, commentCount, progress } = routeData;
+  const isCompleted = progress?.completed || false;
 
-  const hasAccess = isOwner ? (demoMode === 'con-acceso') : alumno.purchasedCourses.includes(course.id);
+  const hasAccess = isOwner ? (demoMode === 'con-acceso') : enrollments.some(e => e.product_id === course.id && e.status === 'active');
   if (!hasAccess && !clase.is_free_preview) {
     return (
       <div className="flex flex-col flex-1 items-center justify-center p-8 text-center min-h-[60vh]">
@@ -102,24 +149,17 @@ export default function ClaseReproductor() {
   }
 
   // Prev/Next logic
-  const allLessonsFlat = course.modules.flatMap(m => m.lessons);
-  const currentIndex = allLessonsFlat.findIndex(l => l.id === clase.id);
+  const allLessonsFlat = course.modules.flatMap((m: any) => m.lessons);
+  const currentIndex = allLessonsFlat.findIndex((l: any) => l.id === clase.id);
   const clasePrev = currentIndex > 0 ? allLessonsFlat[currentIndex - 1] : null;
   const claseNext = currentIndex < allLessonsFlat.length - 1 ? allLessonsFlat[currentIndex + 1] : null;
 
-  const marcarCompletada = () => {
-    setCompletada(true);
-    toast.success("¡Clase completada!");
-    if (claseNext && !claseNext.isFreePreview && !hasAccess) {
-      toast.info("La siguiente clase es premium");
-    }
-  };
-
-  const claseCompletada = (lessonId: string) => alumno.completedLessons.includes(lessonId) || (lessonId === id && completada);
+  const marcarCompletada = () => mtMarcarCompletada(null);
+  const claseCompletada = (lessonId: string) => lessonId === id && isCompleted;
 
   const handleQuizComplete = (score: number) => {
-    if (score >= 70) {
-      marcarCompletada();
+    if (score >= 70 && !isCompleted) {
+      mtMarcarCompletada(score);
     }
   };
 
@@ -185,9 +225,9 @@ export default function ClaseReproductor() {
           </div>
           
           <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-            {!completada && (
-              <Button onClick={marcarCompletada} className="gap-2 shrink-0 bg-green-600 hover:bg-green-700 text-white shadow-sm flex-1 sm:flex-none">
-                <CheckCircle className="h-4 w-4" />
+            {!isCompleted && (
+              <Button onClick={() => marcarCompletada()} disabled={isMarking} className="gap-2 shrink-0 bg-green-600 hover:bg-green-700 text-white shadow-sm flex-1 sm:flex-none">
+                {isMarking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 Marcar lista
               </Button>
             )}
@@ -215,7 +255,7 @@ export default function ClaseReproductor() {
               {clase.quiz && <TabsTrigger value="quiz" className="data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-6 py-3 text-base">Quiz Automático</TabsTrigger>}
               <TabsTrigger value="comentarios" className="data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-6 py-3 text-base">
                 Discusión
-                <Badge variant="secondary" className="ml-2 bg-muted-foreground/15 text-muted-foreground text-xs">2</Badge>
+                <Badge variant="secondary" className="ml-2 bg-muted-foreground/15 text-muted-foreground text-xs">{commentCount}</Badge>
               </TabsTrigger>
             </TabsList>
             

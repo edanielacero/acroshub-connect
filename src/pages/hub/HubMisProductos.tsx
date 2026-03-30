@@ -1,34 +1,31 @@
-import { useParams, Link } from "react-router-dom";
-import { hubs, courses, getCurrentAlumno } from "@/data/mockData";
+import { useParams, Link, useOutletContext } from "react-router-dom";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ShoppingBag, PlayCircle } from "lucide-react";
+import { ShoppingBag, PlayCircle, BookOpen, Loader2 } from "lucide-react";
 
 export default function HubMisProductos() {
   const { slug } = useParams();
-  const hub = hubs.find(h => h.slug === slug);
-  const alumno = getCurrentAlumno();
-  if (!hub || !alumno) return null;
+  const { hub } = useOutletContext<{ hub: any }>();
+  const { courses, ebooks, isLoading } = useAlumnoData();
+  
+  if (isLoading) {
+    return <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+  
+  if (!hub) return null;
 
-  const purchasedCourseIds = alumno.purchasedCourses;
-  // Get all courses belonging to this hub that the student has purchased
-  const productosConAcceso = courses.filter(c => c.hubId === hub.id && purchasedCourseIds.includes(c.id));
+  // Filter products by this current hub
+  const misCursos = courses.filter(c => c.hub_id === hub.id);
+  const misEbooks = ebooks.filter(e => e.hub_id === hub.id);
 
-  // Helper to calculate progress
-  const getProgress = (courseId: string) => {
-    const course = courses.find(c => c.id === courseId);
-    if (!course) return 0;
-    const allLessonIds = course.modules.flatMap(m => m.lessons.map(l => l.id));
-    if (allLessonIds.length === 0) return 0;
-    const completed = alumno.completedLessons.filter(lessonId => allLessonIds.includes(lessonId)).length;
-    return Math.round((completed / allLessonIds.length) * 100);
-  };
+  const hasProducts = misCursos.length > 0 || misEbooks.length > 0;
 
   return (
     <div className="animate-fade-in flex flex-col container mx-auto px-4 sm:px-6">
-      {productosConAcceso.length > 0 ? (
+      {hasProducts ? (
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Mis productos</h1>
@@ -36,14 +33,11 @@ export default function HubMisProductos() {
           </div>
           
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {productosConAcceso.map(course => {
-              const progreso = getProgress(course.id);
-              
-              return (
+            {misCursos.map(course => (
               <Card key={course.id} className="overflow-hidden hover:-translate-y-1 transition-transform hover:shadow-lg group flex flex-col">
                 <div className="h-40 bg-slate-100 relative overflow-hidden flex items-center justify-center">
                   <img 
-                    src={`https://placehold.co/600x400/2563eb/ffffff?text=${encodeURIComponent(course.title)}`} 
+                    src={course.image_url || `https://placehold.co/600x400/2563eb/ffffff?text=${encodeURIComponent(course.title)}`} 
                     alt={course.title} 
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
                   />
@@ -55,28 +49,41 @@ export default function HubMisProductos() {
                     <Badge variant="outline" className="mb-3 font-medium bg-background">Curso</Badge>
                     <h3 className="font-bold text-lg line-clamp-2 leading-snug">{course.title}</h3>
                     
-                    {/* Progreso */}
-                    <div className="mt-5 bg-muted/30 p-3 rounded-lg border border-muted/50">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-2 font-medium">
-                        <span>Progreso general</span>
-                        <span className={progreso === 100 ? "text-green-600 font-bold" : "text-primary"}>{progreso}%</span>
-                      </div>
-                      <Progress value={progreso} className="h-2" />
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground mt-3">
-                      Acceso de por vida
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-3">Acceso disponible</p>
                   </div>
                   
                   <Button className="w-full mt-6" asChild>
-                    <Link to={`/${slug}/curso/${course.id}`}>
-                      Continuar aprendiendo
-                    </Link>
+                    <Link to={`/${slug}/curso/${course.id}`}>Continuar aprendiendo</Link>
                   </Button>
                 </CardContent>
               </Card>
-            )})}
+            ))}
+
+            {misEbooks.map(ebook => (
+              <Card key={ebook.id} className="overflow-hidden hover:-translate-y-1 transition-transform hover:shadow-lg group flex flex-col">
+                <div className="h-40 bg-slate-100 relative overflow-hidden flex items-center justify-center">
+                  <img 
+                    src={ebook.image_url || `https://placehold.co/600x400/10b981/ffffff?text=${encodeURIComponent(ebook.title)}`} 
+                    alt={ebook.title} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                  />
+                  <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/20" />
+                  <BookOpen className="h-10 w-10 text-white/80 absolute shadow-sm" />
+                </div>
+                <CardContent className="p-5 flex-1 flex flex-col justify-between">
+                  <div>
+                    <Badge variant="outline" className="mb-3 font-medium bg-background text-emerald-600 border-emerald-200">E-Book</Badge>
+                    <h3 className="font-bold text-lg line-clamp-2 leading-snug">{ebook.title}</h3>
+                    
+                    <p className="text-xs text-muted-foreground mt-3">Acceso disponible</p>
+                  </div>
+                  
+                  <Button className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700" asChild>
+                    <Link to={`/${slug}/ebook/${ebook.id}`}>Leer E-Book</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       ) : (

@@ -3,8 +3,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { QuizQuestion } from "@/data/mockData";
 import { CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctIndex: number;
+}
 
 interface Props {
   quiz: QuizQuestion[];

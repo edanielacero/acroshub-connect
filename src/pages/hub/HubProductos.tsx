@@ -1,19 +1,24 @@
 import { Link, useOutletContext } from "react-router-dom";
-import { getCurrentAlumno } from "@/data/mockData";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ShoppingBag, PlayCircle, Lock, BookOpen, Loader2 } from "lucide-react";
+import { PlayCircle, Lock, BookOpen, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { usePreview } from "@/components/layout/PreviewProvider";
+import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function HubProductos() {
   const { hub } = useOutletContext<{ hub: any }>();
   const { demoMode, isOwner } = usePreview();
-  const alumno = getCurrentAlumno();
-  if (!hub || !alumno) return null;
+  const { enrollments } = useAlumnoData();
+  const { user } = useAuth();
+  
+  if (!hub) return null;
 
   const { data: hubCourses = [], isLoading: loadingC } = useQuery({
     queryKey: ['hubCourses', hub?.id],
@@ -46,12 +51,40 @@ export default function HubProductos() {
     enabled: productIds.length > 0
   });
 
-  if (loadingC || loadingE || (productIds.length > 0 && loadingP)) return <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  const courseIds = hubCourses.map(c => c.id);
+  
+  // Track all lessons in these courses for progress calculation
+  const { data: allHubLessons = [], isLoading: loadingL } = useQuery({
+    queryKey: ['hubAllLessons', courseIds],
+    queryFn: async () => {
+      if (courseIds.length === 0) return [];
+      const { data: mData } = await supabase.from('modules').select('id, course_id').in('course_id', courseIds);
+      if (!mData || mData.length === 0) return [];
+      const { data: lData } = await supabase.from('lessons').select('id, module_id').in('module_id', mData.map(m=>m.id));
+      return (lData || []).map(l => {
+        const mod = mData.find(m => m.id === l.module_id);
+        return { id: l.id, course_id: mod?.course_id };
+      });
+    },
+    enabled: courseIds.length > 0
+  });
+
+  // Track student's completed lessons
+  const { data: userProgress = [], isLoading: loadingProg } = useQuery({
+    queryKey: ['hubProgress', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase.from('lesson_progress').select('lesson_id, completed').eq('user_id', user.id).eq('completed', true);
+      return data || [];
+    },
+    enabled: !!user?.id
+  });
+
+  if (loadingC || loadingE || loadingL || loadingProg || (productIds.length > 0 && loadingP)) return <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   
   const hasAccess = (p: any) => {
     if (isOwner) return demoMode === 'con-acceso';
-    if (p.productType === 'course') return alumno.purchasedCourses?.includes(p.id);
-    return alumno.purchasedEbooks?.includes(p.id);
+    return enrollments.some(e => e.product_id === p.id && e.status === 'active');
   };
   
   const productosConAcceso = allProducts.filter(hasAccess);
@@ -59,7 +92,22 @@ export default function HubProductos() {
 
   // Helper to calculate progress
   const getProgress = (courseId: string) => {
-    return 0; // Implement DB-level progress matching later if needed
+    const courseLessons = allHubLessons.filter((l: any) => l.course_id === courseId);
+    if (courseLessons.length === 0) return 0;
+    
+    const completedCount = courseLessons.filter((l: any) => 
+      userProgress.some((p: any) => p.lesson_id === l.id && p.completed)
+    ).length;
+    
+    return Math.round((completedCount / courseLessons.length) * 100);
+  };
+  
+  const getAccesoText = (productId: string) => {
+    if (isOwner && demoMode === 'con-acceso') return "Acceso de por vida (Vista Previa)";
+    const enrollment = enrollments.find(e => e.product_id === productId && e.status === 'active');
+    if (!enrollment) return "Sin acceso";
+    if (!enrollment.expires_at) return "Acceso de por vida";
+    return `Acceso hasta el ${format(new Date(enrollment.expires_at), "d 'de' MMMM, yyyy", { locale: es })}`;
   };
 
   return (
@@ -120,7 +168,7 @@ export default function HubProductos() {
                       )}
                       
                       <p className="text-xs text-muted-foreground mt-3">
-                        Acceso de por vida
+                        {getAccesoText(product.id)}
                       </p>
                     </div>
                     

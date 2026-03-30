@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useOutletContext } from "react-router-dom";
 import { usePreview } from "@/components/layout/PreviewProvider";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -10,13 +11,13 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Lock, CheckCircle, BookOpen, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { getCurrentAlumno } from "@/data/mockData";
+import { EbookViewer } from "@/components/hub/EbookViewer";
 
 export default function EbookDetalle() {
   const { hub } = useOutletContext<{ hub: any }>();
   const { id } = useParams();
   const { demoMode, isOwner } = usePreview();
-  const alumno = getCurrentAlumno();
+  const { enrollments } = useAlumnoData();
 
   const { data, isLoading } = useQuery({
     queryKey: ['ebookDetalle', id],
@@ -61,8 +62,7 @@ export default function EbookDetalle() {
 
   const { ebook, pricingOptions, prof } = data;
 
-  const purchasedEbookIds = alumno.purchasedEbooks || [];
-  const hasAccess = isOwner ? (demoMode === 'con-acceso') : purchasedEbookIds.includes(ebook.id);
+  const hasAccess = isOwner ? (demoMode === 'con-acceso') : enrollments.some(e => e.product_id === ebook.id && e.status === 'active');
 
   const isManualPayment = !prof?.stripe_connected && !!prof?.manual_payment_link;
   const isUnavailable = !prof?.stripe_connected && !prof?.manual_payment_link;
@@ -89,18 +89,24 @@ export default function EbookDetalle() {
             <p className="text-muted-foreground mt-2">{ebook.description}</p>
           </div>
           <div className="shrink-0 flex items-center justify-center">
-             <Button className="gap-2 shrink-0 md:w-auto w-full" size="lg">
+             <Button className="gap-2 shrink-0 md:w-auto w-full" size="lg" onClick={() => window.open(ebook.pdf_url || '#', '_blank')}>
                 <Download className="h-4 w-4" />
                 Descargar Archivo
              </Button>
           </div>
         </div>
 
-        {/* Embedded PDF Viewer Placeholder */}
-        <div className="bg-muted shadow-inner rounded-2xl border border-muted-foreground/10 h-[70vh] flex flex-col items-center justify-center text-muted-foreground">
-           <BookOpen className="h-16 w-16 mb-4 opacity-50" />
-           <p className="font-medium">El lector interactivo de PDF/EPUB se mostraría aquí</p>
-           <p className="text-sm mt-2 opacity-70">En la versión funcional, incluiría visor embebido de alta fidelidad.</p>
+        {/* Embedded PDF Viewer */}
+        <div className="mt-8">
+          {ebook.pdf_url ? (
+            <EbookViewer url={ebook.pdf_url} title={ebook.title} />
+          ) : (
+            <div className="bg-muted shadow-inner rounded-2xl border border-muted-foreground/10 h-[80vh] w-full flex flex-col items-center justify-center text-muted-foreground">
+              <BookOpen className="h-16 w-16 mb-4 opacity-50" />
+              <p className="font-medium">Archivo no disponible para su visualización</p>
+              <p className="text-sm mt-2 opacity-70">Puedes intentar descargarlo directamente.</p>
+            </div>
+          )}
         </div>
       </div>
     );

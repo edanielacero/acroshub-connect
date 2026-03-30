@@ -1,29 +1,59 @@
 import { useState } from "react";
-import { getCurrentAlumno, courses, ebooks, hubs } from "@/data/mockData";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { useAlumnoData } from "@/hooks/useAlumnoData";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, CalendarDays, ExternalLink, Receipt, AlertTriangle } from "lucide-react";
+import { CreditCard, CalendarDays, ExternalLink, Receipt, AlertTriangle, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function AlumnoPagos() {
-  const alumno = getCurrentAlumno();
+  const { enrollments, courses, ebooks, hubs, pricingOptions, isLoading } = useAlumnoData();
   const [cancelingProductId, setCancelingProductId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  // Mapear productos adquiridos
-  const allProductsIds = [...alumno.purchasedCourses, ...alumno.purchasedEbooks];
-  const allProducts = [...courses, ...ebooks].filter(p => allProductsIds.includes(p.id));
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  // Simular la acción de cancelar
-  const handleCancelSubscription = (productId: string) => {
+  const allProducts = [...courses, ...ebooks];
+  const activeSubs = enrollments.filter(e => e.access_type === 'subscription' && e.status === 'active');
+  const uniquePurchases = enrollments.filter(e => e.access_type === 'lifetime');
+
+  const queryClient = useQueryClient();
+
+  const handleCancelSubscription = async (productId: string) => {
+    const enrollment = activeSubs.find(e => e.product_id === productId);
+    if (!enrollment) return;
+
+    // Actualizamos la base de datos para simular la cancelación de la suscripción (en una app real interactuaría con Stripe)
+    const { error } = await supabase
+      .from('enrollments')
+      .update({ status: 'canceled' })
+      .eq('id', enrollment.id);
+      
+    if (error) {
+      toast.error("Hubo un error al cancelar: " + error.message);
+      return;
+    }
+
     toast.success("Tu suscripción ha sido cancelada. Tendrás acceso hasta el final del periodo facturado.");
     setCancelingProductId(null);
+    queryClient.invalidateQueries({ queryKey: ['alumno_enrollments', enrollment.alumno_id] });
   };
 
   return (
-    <div className="container py-8 sm:py-12 max-w-5xl mx-auto space-y-8">
+    <div className="container py-8 sm:py-12 max-w-5xl mx-auto space-y-8 animate-fade-in">
       <div>
+        <Button variant="ghost" className="mb-4 -ml-4" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
         <h1 className="text-3xl font-bold tracking-tight">Facturación e Historial</h1>
         <p className="text-muted-foreground mt-2">Gestiona tus suscripciones recurrentes y visualiza tus compras en todas las academias.</p>
       </div>
@@ -35,33 +65,45 @@ export default function AlumnoPagos() {
             <CardDescription>Tus productos que requieren pagos recurrentes mensuales o anuales.</CardDescription>
           </CardHeader>
           <CardContent className="divide-y">
-            {allProducts.length === 0 && (
-              <div className="text-center py-6 text-muted-foreground">No tienes ninguna compra registrada.</div>
+            {activeSubs.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground">No tienes ninguna suscripción recurrente activa.</div>
             )}
             
-            {allProducts.map(product => {
-              const hub = hubs.find(h => h.id === product.hubId);
-              // Verificar si este producto tiene una sub activa
-              const activeSub = alumno.activeSubscriptions?.find(s => s.productId === product.id && s.status === 'activa');
+            {activeSubs.map(enrollment => {
+              const product = allProducts.find(p => p.id === enrollment.product_id);
+              if (!product) return null;
               
-              if (!activeSub) return null; // Solo renderizar en esta lista los que sí son suscripciones recurrentes 
+              const hub = hubs.find((h: any) => h.id === product.hub_id);
+              
+              // We don't have exact billing info natively in Supabase yet without Stripe integration, 
+              // so we construct a placeholder or use pricing options to guess the amount paid.
+              const priceMatch = pricingOptions.find((p: any) => p.product_id === product.id && p.type !== 'one-time');
+              const amount = priceMatch ? priceMatch.price : 0;
+              const currency = priceMatch ? priceMatch.currency : 'USD';
+              const typeLabel = priceMatch?.type === 'annual' ? '/ año' : '/ mes';
+              const typeStr = priceMatch?.type === 'annual' ? 'Anual' : 'Mensual';
+
+              let nextBilling = "Por definir";
+              if (enrollment.expires_at) {
+                nextBilling = new Date(enrollment.expires_at).toLocaleDateString();
+              }
 
               return (
-                <div key={product.id} className="py-6 first:pt-2 last:pb-2 flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+                <div key={enrollment.id} className="py-6 first:pt-2 last:pb-2 flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                        <h3 className="font-semibold text-lg">{product.title}</h3>
                        <Badge variant="secondary" className="bg-primary/10 text-primary capitalize font-medium">
-                         Facturado {activeSub.type}
+                         Facturado {typeStr}
                        </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                        <ExternalLink className="h-3.5 w-3.5" /> <Link to={`/${hub?.slug}`} className="hover:underline">{hub?.name}</Link>
                     </p>
                     <div className="flex items-center gap-3 mt-3 text-sm">
-                       <span className="font-bold whitespace-nowrap">${activeSub.amount} {activeSub.currency} {activeSub.type === 'mensual' ? '/ mes' : '/ año'}</span>
+                       <span className="font-bold whitespace-nowrap">${amount} {currency} {typeLabel}</span>
                        <span className="text-muted-foreground flex items-center gap-1">
-                          <CalendarDays className="h-3.5 w-3.5" /> Próximo cobro: {new Date(activeSub.nextBilling).toLocaleDateString()}
+                          <CalendarDays className="h-3.5 w-3.5" /> Próximo cobro: {nextBilling}
                        </span>
                     </div>
                   </div>
@@ -84,13 +126,6 @@ export default function AlumnoPagos() {
                 </div>
               );
             })}
-
-            {/* If there are products but none has an active subscription block, tell the user directly */}
-            {allProducts.length > 0 && !(alumno.activeSubscriptions?.some(sub => allProducts.some(p => p.id === sub.productId))) && (
-              <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg mt-4 hidden last:block">
-                No tienes ninguna suscripción recurrente activa en este momento.
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -101,14 +136,19 @@ export default function AlumnoPagos() {
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-               {allProducts.filter(p => !alumno.activeSubscriptions?.some(s => s.productId === p.id)).map(product => (
-                 <div key={product.id} className="p-3 bg-muted/40 rounded-lg border flex flex-col justify-between">
-                    <p className="font-medium text-sm line-clamp-2" title={product.title}>{product.title}</p>
-                    <Badge variant="outline" className="w-fit mt-3 bg-background">Pago único completado</Badge>
-                 </div>
-               ))}
+               {uniquePurchases.map(enrollment => {
+                 const product = allProducts.find(p => p.id === enrollment.product_id);
+                 if (!product) return null;
+                 
+                 return (
+                   <div key={enrollment.id} className="p-3 bg-muted/40 rounded-lg border flex flex-col justify-between">
+                      <p className="font-medium text-sm line-clamp-2" title={product.title}>{product.title}</p>
+                      <Badge variant="outline" className="w-fit mt-3 bg-background">Pago único completado</Badge>
+                   </div>
+                 );
+               })}
             </div>
-            {allProducts.filter(p => !alumno.activeSubscriptions?.some(s => s.productId === p.id)).length === 0 && (
+            {uniquePurchases.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">No tienes compras únicas registradas.</p>
             )}
           </CardContent>
