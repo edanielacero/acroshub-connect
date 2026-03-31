@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, GripVertical, Plus, Video, FileText, AlertTriangle, Trash2, Paperclip, UploadCloud, Loader2, MoreHorizontal, Pencil } from "lucide-react";
+import { ArrowLeft, GripVertical, Plus, Video, FileText, AlertTriangle, Trash2, Paperclip, UploadCloud, Loader2, MoreHorizontal, Pencil, Image as ImageIcon, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -45,7 +45,7 @@ export default function CourseEditor() {
   });
 
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
-  const [videoTab, setVideoTab] = useState<'upload' | 'url'>('url');
+  const [videoTab, setVideoTab] = useState<'upload' | 'url'>('upload');
   
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonIsFree, setLessonIsFree] = useState(false);
@@ -69,6 +69,7 @@ export default function CourseEditor() {
   
   // Upload States
   const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [isAttachmentUploading, setIsAttachmentUploading] = useState(false);
 
   const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,8 +107,20 @@ export default function CourseEditor() {
         }
       );
 
-      const json = await res.json();
-      if (json.error) throw new Error(json.error);
+      let json;
+      try {
+        json = await res.json();
+      } catch (e) {
+        throw new Error(`Error del servidor (${res.status}): ${res.statusText}`);
+      }
+
+      if (!res.ok || json.error) {
+        throw new Error(json.error || json.message || "Error en la subida del video");
+      }
+
+      if (!json.embedUrl) {
+        throw new Error("No se recibió la URL de inserción del video");
+      }
 
       setLessonVideoUrl(json.embedUrl);
       // setVideoTab('url'); // No longer switching tabs
@@ -116,6 +129,69 @@ export default function CourseEditor() {
       toast.error(`Error al subir video: ${error.message}`);
     } finally {
       setIsVideoUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Solo se permiten archivos de imagen.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen supera el límite de 5MB");
+      return;
+    }
+
+    const match = lessonVideoUrl.match(/\/embed\/[^\/]+\/([^\/?]+)/);
+    const videoId = match ? match[1] : null;
+
+    if (!videoId) {
+      toast.error("No se pudo identificar el video para subir la miniatura.");
+      return;
+    }
+
+    setIsThumbnailUploading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("No se pudo obtener la sesión.");
+
+      const formData = new FormData();
+      formData.append('thumbnail', file);
+      formData.append('videoId', videoId);
+
+      const res = await fetch(
+        import.meta.env.VITE_SUPABASE_URL + '/functions/v1/upload-thumbnail',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      let json;
+      try {
+        json = await res.json();
+      } catch (e) {
+        throw new Error(`Error del servidor (${res.status}): ${res.statusText}`);
+      }
+
+      if (!res.ok || json.error) {
+        throw new Error(json.error || json.message || "Error al subir la miniatura");
+      }
+
+      toast.success("Miniatura actualizada correctamente. Puede tardar unos minutos en reflejarse en el video por la caché.");
+    } catch (error: any) {
+      toast.error(`Error al subir miniatura: ${error.message}`);
+    } finally {
+      setIsThumbnailUploading(false);
       event.target.value = "";
     }
   };
@@ -539,9 +615,7 @@ export default function CourseEditor() {
                             ) : (
                               <video src={lessonVideoUrl} controls className="w-full h-full" />
                             )}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                              <p className="text-white text-sm font-medium">Vista previa del video</p>
-                            </div>
+
                           </div>
                           <Button 
                             variant="outline" 
@@ -556,6 +630,14 @@ export default function CourseEditor() {
                           >
                             <Trash2 className="mr-2 h-4 w-4" /> Eliminar video y subir otro
                           </Button>
+                        </div>
+                      ) : lessonVideoUrl ? (
+                        <div className="flex flex-col items-center justify-center p-8 text-center rounded-lg border-2 border-dashed bg-muted/30">
+                          <AlertTriangle className="h-8 w-8 text-warning mb-3" />
+                          <p className="font-medium text-foreground">Ya has importado una URL de video</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Para subir un video directamente, primero debes eliminar la URL importada en la pestaña "Importar URL".
+                          </p>
                         </div>
                       ) : (
                         <>
@@ -584,17 +666,104 @@ export default function CourseEditor() {
                         </>
                       )}
                     </TabsContent>
-                    <TabsContent value="url" className="space-y-2">
-                      <Input placeholder="https://youtube.com/watch?v=..." value={lessonVideoUrl} onChange={e => setLessonVideoUrl(e.target.value)} />
-                      <div className="flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-sm">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                        <span>La URL será visible para los alumnos. Para proteger tu contenido, usa la opción de subir video.</span>
-                      </div>
+                    <TabsContent value="url" className="space-y-4 pt-2">
+                      {lessonVideoUrl && (lessonVideoUrl.includes('mediadelivery.net') || lessonVideoUrl.includes('supabase.co')) ? (
+                        <div className="flex flex-col items-center justify-center p-8 text-center rounded-lg border-2 border-dashed bg-muted/30">
+                          <Video className="h-8 w-8 text-muted-foreground mb-3" />
+                          <p className="font-medium text-foreground">Ya has subido un video</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Para importar una URL externa, primero debes eliminar el video actual en la pestaña "Subir video".
+                          </p>
+                        </div>
+                      ) : lessonVideoUrl ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3 p-3 bg-green-500/10 text-green-700 rounded-lg border border-green-500/20">
+                            <CheckCircle2 className="h-5 w-5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                               <p className="font-medium text-sm truncate">URL Importada Correctamente</p>
+                               <p className="text-xs opacity-80 truncate">{lessonVideoUrl}</p>
+                            </div>
+                          </div>
+                          <div className="aspect-video rounded-lg overflow-hidden border bg-black shadow-sm">
+                            {lessonVideoUrl.includes('youtube.com') || lessonVideoUrl.includes('youtu.be') ? (
+                              <iframe
+                                src={`https://www.youtube.com/embed/${lessonVideoUrl.split('v=')[1]?.split('&')[0] || lessonVideoUrl.split('youtu.be/')[1]?.split('?')[0]}`}
+                                className="w-full h-full border-0"
+                                allowFullScreen
+                              />
+                            ) : lessonVideoUrl.includes('vimeo.com') ? (
+                              <iframe
+                                src={`https://player.vimeo.com/video/${lessonVideoUrl.split('vimeo.com/')[1]}`}
+                                className="w-full h-full border-0"
+                                allowFullScreen
+                              />
+                            ) : (
+                               <video src={lessonVideoUrl} controls className="w-full h-full" />
+                            )}
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full text-destructive hover:bg-destructive hover:text-white border-destructive/20"
+                            onClick={() => {
+                              if (confirm("¿Estás seguro de que quieres eliminar esta URL importada?")) {
+                                setLessonVideoUrl("");
+                                toast.success("URL quitada de la clase. No olvides guardar para confirmar.");
+                              }
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar URL importada
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Label>Introduce el enlace del video (YouTube, Vimeo, etc.)</Label>
+                          <div className="flex gap-2">
+                            <Input placeholder="Ej. https://youtube.com/watch?v=..." value={lessonVideoUrl} onChange={e => setLessonVideoUrl(e.target.value)} />
+                          </div>
+                          <div className="flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-sm mt-2">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                            <span>La URL será visible para los alumnos al inspeccionar el código. Para proteger contenido exclusivo, sugerimos subir el video directamente a Bunny.</span>
+                          </div>
+                        </div>
+                      )}
                     </TabsContent>
                   </Tabs>
                 </div>
 
-                <div className="space-y-4">
+                {lessonVideoUrl && lessonVideoUrl.includes('mediadelivery.net') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4" />Miniatura del video (Opcional)</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Personaliza la portada del video. Si no subes una, se usará la miniatura autogenerada. (Recomendado: 1280x720, JPG/PNG, Máx. 5MB)
+                      </p>
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      className="hidden" 
+                      id="thumbnail-upload" 
+                      onChange={handleThumbnailUpload}
+                      disabled={isThumbnailUploading}
+                    />
+                    <label 
+                      htmlFor="thumbnail-upload" 
+                      className={`rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/50 hover:bg-muted transition-colors p-4 text-center cursor-pointer group block ${isThumbnailUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                          {isThumbnailUploading ? <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" /> : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{isThumbnailUploading ? 'Subiendo miniatura...' : 'Haz clic para subir tu propia miniatura'}</p>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
+                <div className="space-y-4 pt-4 border-t">
                   <Label className="flex items-center gap-2"><Paperclip className="h-4 w-4" />Archivos adjuntos</Label>
                   
                   {/* Zona de subida */}
