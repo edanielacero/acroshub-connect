@@ -86,19 +86,32 @@ export default function CourseEditor() {
     }
 
     setIsVideoUploading(true);
-    const fileExt = file.name.split('.').pop();
-    const safeName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileName = `video_${safeName}_${Date.now()}.${fileExt}`;
-    const filePath = `${course?.profesor_id}/${course?.id}/${selectedLesson?.id}/${fileName}`;
 
     try {
-      const { error: uploadError } = await supabase.storage.from('courses').upload(filePath, file);
-      if (uploadError) throw uploadError;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("No se pudo obtener la sesión.");
 
-      const { data } = supabase.storage.from('courses').getPublicUrl(filePath);      
-      setLessonVideoUrl(data.publicUrl);
-      setVideoTab('url');
-      toast.success("Video subido. No olvides Guardar la clase.");
+      const formData = new FormData();
+      formData.append('video', file);
+      formData.append('title', `${course?.title || 'Curso'} - ${lessonTitle || 'Clase'}`);
+
+      const res = await fetch(
+        import.meta.env.VITE_SUPABASE_URL + '/functions/v1/upload-video',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+
+      setLessonVideoUrl(json.embedUrl);
+      // setVideoTab('url'); // No longer switching tabs
+      toast.success("Video subido correctamente. No olvides Guardar la clase.");
     } catch (error: any) {
       toast.error(`Error al subir video: ${error.message}`);
     } finally {
@@ -513,28 +526,63 @@ export default function CourseEditor() {
                       <TabsTrigger value="url">Importar URL</TabsTrigger>
                     </TabsList>
                     <TabsContent value="upload">
-                      <input 
-                        type="file" 
-                        accept="video/*" 
-                        className="hidden" 
-                        id="video-upload" 
-                        onChange={handleVideoUpload}
-                        disabled={isVideoUploading}
-                      />
-                      <label 
-                        htmlFor="video-upload" 
-                        className={`rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group block ${isVideoUploading ? 'opacity-50 pointer-events-none' : ''}`}
-                      >
-                        <div className="flex flex-col items-center justify-center gap-3">
-                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            {isVideoUploading ? <Loader2 className="h-6 w-6 text-primary animate-spin" /> : <Video className="h-6 w-6 text-primary" />}
+                      {lessonVideoUrl && (lessonVideoUrl.includes('mediadelivery.net') || lessonVideoUrl.includes('supabase.co')) ? (
+                        <div className="space-y-4">
+                          <div className="aspect-video rounded-lg overflow-hidden border bg-black relative group">
+                            {lessonVideoUrl.includes('mediadelivery.net') ? (
+                              <iframe 
+                                src={lessonVideoUrl + '?autoplay=false'} 
+                                className="w-full h-full border-0"
+                                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                                allowFullScreen
+                              />
+                            ) : (
+                              <video src={lessonVideoUrl} controls className="w-full h-full" />
+                            )}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                              <p className="text-white text-sm font-medium">Vista previa del video</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">{isVideoUploading ? 'Subiendo video... esto puede tomar minutos.' : 'Arrastra un video o haz clic para seleccionar'}</p>
-                            <p className="text-sm text-muted-foreground mt-1">Archivo MP4, WEBM (Máx. 500MB)</p>
-                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full text-destructive hover:bg-destructive hover:text-white border-destructive/20"
+                            onClick={() => {
+                              if (confirm("¿Estás seguro de que quieres eliminar este video de la clase?")) {
+                                setLessonVideoUrl("");
+                                toast.success("Video quitado de la clase. No olvides guardar para confirmar.");
+                              }
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar video y subir otro
+                          </Button>
                         </div>
-                      </label>
+                      ) : (
+                        <>
+                          <input 
+                            type="file" 
+                            accept="video/*" 
+                            className="hidden" 
+                            id="video-upload" 
+                            onChange={handleVideoUpload}
+                            disabled={isVideoUploading}
+                          />
+                          <label 
+                            htmlFor="video-upload" 
+                            className={`rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors p-8 text-center cursor-pointer group block ${isVideoUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                          >
+                            <div className="flex flex-col items-center justify-center gap-3">
+                              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                {isVideoUploading ? <Loader2 className="h-6 w-6 text-primary animate-spin" /> : <Video className="h-6 w-6 text-primary" />}
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{isVideoUploading ? 'Subiendo video... esto puede tomar minutos.' : 'Arrastra un video o haz clic para seleccionar'}</p>
+                                <p className="text-sm text-muted-foreground mt-1">Archivo MP4, WEBM (Máx. 500MB)</p>
+                              </div>
+                            </div>
+                          </label>
+                        </>
+                      )}
                     </TabsContent>
                     <TabsContent value="url" className="space-y-2">
                       <Input placeholder="https://youtube.com/watch?v=..." value={lessonVideoUrl} onChange={e => setLessonVideoUrl(e.target.value)} />

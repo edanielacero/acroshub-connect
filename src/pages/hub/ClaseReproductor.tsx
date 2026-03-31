@@ -163,6 +163,7 @@ export default function ClaseReproductor() {
     }
   };
 
+  const isBunnyEmbed = clase.video_url?.includes('mediadelivery.net/embed/');
   const isDirectVideo = clase.video_url?.match(/\.(mp4|webm|ogg)$/i) || clase.video_url?.includes('supabase.co/storage/v1/object/public/');
 
   const getEmbedUrl = (url: string) => {
@@ -179,6 +180,10 @@ export default function ClaseReproductor() {
       const videoId = url.split('vimeo.com/')[1].split('?')[0];
       return `https://player.vimeo.com/video/${videoId}`;
     }
+    if (url.includes('drive.google.com/file/d/')) {
+      const fileId = url.split('/d/')[1]?.split('/')[0];
+      if (fileId) return `https://drive.google.com/file/d/${fileId}/preview`;
+    }
     return url;
   };
 
@@ -189,7 +194,15 @@ export default function ClaseReproductor() {
         {/* Video Player */}
         <div className="aspect-video bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-1 ring-border relative group">
           {clase.video_url ? (
-            isDirectVideo ? (
+            isBunnyEmbed ? (
+              <iframe 
+                src={clase.video_url + '?autoplay=false&preload=true'} 
+                className="w-full h-full border-0 absolute inset-0"
+                loading="lazy"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+              />
+            ) : isDirectVideo ? (
               <video 
                 src={clase.video_url} 
                 className="w-full h-full absolute inset-0 outline-none"
