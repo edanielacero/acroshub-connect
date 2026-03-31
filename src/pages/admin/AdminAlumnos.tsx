@@ -27,6 +27,7 @@ export default function AdminAlumnos() {
   const [emailSentStatus, setEmailSentStatus] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [existingUserId, setExistingUserId] = useState<string | null>(null);
 
   const resetForm = () => {
     setEmail(""); 
@@ -34,6 +35,7 @@ export default function AdminAlumnos() {
     setSubmitResult(null); 
     setEmailSentStatus(false); 
     setCopiedLink(false);
+    setExistingUserId(null);
   };
 
   const { data, isLoading } = useQuery({
@@ -41,13 +43,24 @@ export default function AdminAlumnos() {
     queryFn: async () => {
       const { data: profilesData, error: err1 } = await supabase.from('profiles').select('*').eq('role', 'alumno');
       if (err1) throw err1;
-      const { data: enrollmentsData, error: err2 } = await supabase.from('enrollments').select('alumno_id, status');
+      const { data: enrollmentsData, error: err2 } = await supabase.from('enrollments').select('alumno_id, status, profiles(*)');
       if (err2) throw err2;
       const { data: invitationsData, error: err3 } = await supabase.from('invitations').select('*').eq('status', 'pending');
       if (err3) throw err3;
 
+      // Unify profiles: include all 'alumnos' plus any non-alumnos (like profesores) who have an enrollment
+      const profileMap = new Map();
+      profilesData.forEach(p => profileMap.set(p.id, p));
+      
+      enrollmentsData.forEach(e => {
+        const p = e.profiles as any;
+        if (p && !profileMap.has(p.id)) {
+          profileMap.set(p.id, p);
+        }
+      });
+
       return {
-        profiles: profilesData || [],
+        profiles: Array.from(profileMap.values()),
         enrollments: enrollmentsData || [],
         invitations: invitationsData || []
       };
@@ -60,23 +73,23 @@ export default function AdminAlumnos() {
     
     setIsPending(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(import.meta.env.VITE_SUPABASE_URL + '/functions/v1/process-invitation', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          Authorization: `Bearer ${session?.access_token}` 
-        },
-        body: JSON.stringify({ email, name, productId: null })
+      const { data: json, error: fnErr } = await supabase.functions.invoke('process-invitation', {
+        body: { 
+          email, 
+          name, 
+          productId: null,
+          appUrl: window.location.origin
+        }
       });
 
-      const json = await res.json();
-      if (!res.ok || json.error) throw new Error(json.error || "Error al procesar invitación");
+      if (fnErr) throw new Error("Error de conexión con el servidor");
+      if (json?.error) throw new Error(json.error);
       
       setActivationLink(json.link || "");
       setEmailSentStatus(json.email_sent);
       setSubmitResult(json.is_new ? "invited" : "already_active");
-      toast.success(json.is_new ? "Usuario invitado correctamente." : "El alumno ya existía en la plataforma.");
+      if (!json.is_new && json.userId) setExistingUserId(json.userId);
+      toast.success(json.is_new ? "Usuario invitado correctamente." : "Esta cuenta ya existe en la plataforma.");
       
       queryClient.invalidateQueries({ queryKey: ['admin_alumnos'] });
     } catch (err: any) {
@@ -207,11 +220,16 @@ export default function AdminAlumnos() {
                   <Alert className="bg-yellow-50 border-yellow-200">
                     <CheckCircle className="h-4 w-4 text-yellow-600" />
                     <AlertDescription className="text-yellow-800">
-                      Este correo ya está registrado en Acroshub como alumno. No es necesario volver a agregarlo. Su cuenta ya existe.
+                      Esta identidad ya existe en Acroshub (probablemente un Profesor). No se creó una cuenta nueva en blanco. <br/><br/>Si quieres que esta cuenta se utilice como Alumno, simplemente usa el siguiente botón para <strong>insribirlo manualmente a cursos</strong> desde su perfil de superadmin. El Modo Dual hará efecto inmediatamente.
                     </AlertDescription>
                   </Alert>
+                  {existingUserId && (
+                    <Button asChild className="w-full bg-yellow-600 hover:bg-yellow-700 text-white">
+                      <Link to={`/admin/alumnos/${existingUserId}`}>Ver perfil y asignar curso manual</Link>
+                    </Button>
+                  )}
                   <DialogFooter>
-                    <Button onClick={() => { setIsAddOpen(false); resetForm(); }}>Cerrar</Button>
+                    <Button onClick={() => { setIsAddOpen(false); resetForm(); }}>Cerrar Modal</Button>
                   </DialogFooter>
                 </div>
               )}

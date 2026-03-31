@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
-import { LogOut, ChevronDown, ArrowLeft } from "lucide-react";
+import { LogOut, ChevronDown, ArrowLeft, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function AlumnoLayout() {
   const { profile } = useAlumnoData();
-  const { signOut, user } = useAuth();
+  const { signOut, user, role, setActiveView } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -35,14 +35,19 @@ export function AlumnoLayout() {
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => navigate('/mis-ajustes')}>
+            <DropdownMenuContent align="end" className="w-56">
+              {role === 'profesor' && (
+                <DropdownMenuItem onClick={() => { setActiveView('profesor'); navigate('/dashboard'); }} className="text-primary focus:bg-primary focus:text-primary-foreground font-medium cursor-pointer transition-colors">
+                  <LayoutDashboard className="mr-2 h-4 w-4" /> Volver a mi Panel
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => navigate('/mis-ajustes')} className="text-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors">
                 Mi perfil
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/mis-pagos')}>
+              <DropdownMenuItem onClick={() => navigate('/mis-pagos')} className="text-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors">
                 Facturación
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer transition-colors">
                 <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
               </DropdownMenuItem>
             </DropdownMenuContent>

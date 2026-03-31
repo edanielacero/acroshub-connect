@@ -159,17 +159,17 @@ export function HubLayout() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem asChild className="text-primary focus:bg-primary focus:text-primary-foreground font-medium cursor-pointer transition-colors">
                     <Link to="/mi-cuenta">Ir al Inicio</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem asChild className="text-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors">
                     <Link to="/mis-ajustes">Mi perfil</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem asChild className="text-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors">
                     <Link to="/mis-pagos">Facturación</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer transition-colors">
                      <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
                   </DropdownMenuItem>
                 </DropdownMenuContent>

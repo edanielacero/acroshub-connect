@@ -9,6 +9,9 @@ interface AuthState {
   user: User | null;
   role: Role;
   loading: boolean;
+  hasStudentAccess: boolean;
+  activeView: 'profesor' | 'alumno' | null;
+  setActiveView: (view: 'profesor' | 'alumno' | null) => void;
   signOut: () => Promise<void>;
 }
 
@@ -17,6 +20,9 @@ const AuthContext = createContext<AuthState>({
   user: null,
   role: null,
   loading: true,
+  hasStudentAccess: false,
+  activeView: null,
+  setActiveView: () => {},
   signOut: async () => {},
 });
 
@@ -27,6 +33,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<Role>(null);
   const [loading, setLoading] = useState(true);
+  const [hasStudentAccess, setHasStudentAccess] = useState(false);
+  
+  // Persist active view across reloads so the user doesn't get kicked out to the lobby unnecessarily
+  const [activeView, setActiveView] = useState<'profesor' | 'alumno' | null>(() => {
+    return (localStorage.getItem('acroshub_active_view') as 'profesor' | 'alumno' | null) || null;
+  });
+
+  const checkStudentAccess = async (userId: string | undefined, currentRole: Role) => {
+    if (!userId || currentRole !== 'profesor') {
+      setHasStudentAccess(false);
+      return false;
+    }
+    
+    try {
+      const { count, error } = await supabase
+        .from('enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('alumno_id', userId)
+        .eq('status', 'active');
+        
+      if (error) throw error;
+      const hasAccess = (count || 0) > 0;
+      setHasStudentAccess(hasAccess);
+      return hasAccess;
+    } catch (error) {
+      console.error("Error checking student access:", error);
+      setHasStudentAccess(false);
+      return false;
+    }
+  };
+
+  const handleSetActiveView = (view: 'profesor' | 'alumno' | null) => {
+    setActiveView(view);
+    if (view) {
+      localStorage.setItem('acroshub_active_view', view);
+    } else {
+      localStorage.removeItem('acroshub_active_view');
+    }
+  };
 
   useEffect(() => {
     // 1. Fetch initial session
@@ -35,7 +80,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
-        setRole((session?.user?.user_metadata?.role as Role) || null);
+        const currentRole = (session?.user?.user_metadata?.role as Role) || null;
+        setRole(currentRole);
+        
+        if (session?.user?.id) {
+          const hasAccess = await checkStudentAccess(session.user.id, currentRole);
+          // Si es profesor pero NO tiene acceso de alumno, y su vista activa está colgada en 'alumno'
+          // o es null, forzamos a que vuelva a su panel de profesor
+          if (currentRole === 'profesor' && !hasAccess && activeView !== 'profesor') {
+             handleSetActiveView('profesor');
+          }
+        }
       } catch (error) {
         console.error("Error fetching session:", error);
       } finally {
@@ -47,10 +102,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // 2. Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
+      async (_event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        setRole((currentSession?.user?.user_metadata?.role as Role) || null);
+        const currentRole = (currentSession?.user?.user_metadata?.role as Role) || null;
+        setRole(currentRole);
+        
+        if (currentSession?.user?.id) {
+          await checkStudentAccess(currentSession.user.id, currentRole);
+        } else {
+          setHasStudentAccess(false);
+          handleSetActiveView(null);
+        }
+
         setLoading(false);
       }
     );
@@ -67,7 +131,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, role, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, role, loading, hasStudentAccess, activeView, setActiveView: handleSetActiveView, signOut }}>
       {children}
     </AuthContext.Provider>
   );

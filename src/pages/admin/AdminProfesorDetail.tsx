@@ -32,6 +32,8 @@ export default function AdminProfesorDetail() {
   const [profCourses, setProfCourses] = useState<any[]>([]);
   const [profEbooks, setProfEbooks] = useState<any[]>([]);
   const [profStudents, setProfStudents] = useState<number>(0);
+  const [profEnrollments, setProfEnrollments] = useState<any[]>([]);
+  const [profPricingOptions, setProfPricingOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [planConfigs, setPlanConfigs] = useState<PlanConfig[]>([]);
 
@@ -80,10 +82,17 @@ export default function AdminProfesorDetail() {
         ...(ebooksRes.data || []).map((e: any) => e.id)
       ];
       if (allProductIds.length > 0) {
-        const { data: enrollData } = await supabase.from('enrollments').select('alumno_id').in('product_id', allProductIds);
-        if (enrollData) setProfStudents(new Set(enrollData.map(e => e.alumno_id)).size);
+        const { data: enrollData } = await supabase.from('enrollments').select('alumno_id, product_id').in('product_id', allProductIds).eq('status', 'active');
+        if (enrollData) {
+          setProfStudents(new Set(enrollData.map(e => e.alumno_id)).size);
+          setProfEnrollments(enrollData);
+        }
+        const { data: pricingData } = await supabase.from('pricing_options').select('*').in('product_id', allProductIds);
+        if (pricingData) setProfPricingOptions(pricingData);
       } else {
         setProfStudents(0);
+        setProfEnrollments([]);
+        setProfPricingOptions([]);
       }
 
       if (subsRes.data) setSubs(subsRes.data);
@@ -392,20 +401,28 @@ export default function AdminProfesorDetail() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader><CardTitle>Academias del Profesor</CardTitle></CardHeader>
             <CardContent>
               {profHubs.length > 0 ? (
                 <Table>
-                  <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Cursos</TableHead><TableHead>Alumnos</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Cursos</TableHead><TableHead>Ebooks</TableHead><TableHead>Alumnos (Activos)</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {profHubs.map(h => (
-                      <TableRow key={h.id}>
-                        <TableCell className="font-medium">{h.name}</TableCell>
-                        <TableCell>{h.courses_count || 0}</TableCell>
-                        <TableCell>{h.students_count || 0}</TableCell>
-                      </TableRow>
-                    ))}
+                    {profHubs.map(h => {
+                      const hubCourses = profCourses.filter(c => c.hub_id === h.id);
+                      const hubEbooks = profEbooks.filter(e => e.hub_id === h.id);
+                      const hubProductIds = new Set([...hubCourses.map(c => c.id), ...hubEbooks.map(e => e.id)]);
+                      const hubAlumnos = new Set(profEnrollments.filter(e => hubProductIds.has(e.product_id)).map(e => e.alumno_id)).size;
+
+                      return (
+                        <TableRow key={h.id}>
+                          <TableCell className="font-medium">{h.name}</TableCell>
+                          <TableCell>{hubCourses.length}</TableCell>
+                          <TableCell>{hubEbooks.length}</TableCell>
+                          <TableCell>{hubAlumnos}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               ) : (<p className="text-sm text-muted-foreground">No tiene Academias creadas.</p>)}
@@ -416,19 +433,77 @@ export default function AdminProfesorDetail() {
             <CardHeader><CardTitle>Cursos Creados</CardTitle></CardHeader>
             <CardContent>
               {profCourses.length > 0 ? (
-                <Table>
-                  <TableHeader><TableRow><TableHead>Título</TableHead><TableHead>Precio</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {profCourses.map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium truncate max-w-[150px]">{c.title}</TableCell>
-                        <TableCell>${c.price}</TableCell>
-                        <TableCell><Badge variant={c.published ? 'default' : 'secondary'}>{c.published ? 'Publicado' : 'Borrador'}</Badge></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Título</TableHead><TableHead>Precio</TableHead><TableHead>Acceso</TableHead><TableHead>Academia</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {profCourses.map(c => {
+                        const hubName = profHubs.find(h => h.id === c.hub_id)?.name || 'Sin academia';
+                        const options = profPricingOptions.filter(o => o.product_id === c.id);
+                        
+                        let priceDisplay = "Gratis";
+                        let accessDisplay = "Libre";
+                        
+                        if (options.length === 1) {
+                          priceDisplay = `$${options[0].price}`;
+                          accessDisplay = options[0].type === 'one-time' ? 'Único Pago' : options[0].type === 'monthly' ? 'Mensual' : 'Anual';
+                        } else if (options.length > 1) {
+                          priceDisplay = options.map(o => `$${o.price}`).join(" / ");
+                          accessDisplay = "Múltiple";
+                        }
+
+                        return (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-medium truncate max-w-[150px]" title={c.title}>{c.title}</TableCell>
+                            <TableCell className="text-muted-foreground">{priceDisplay}</TableCell>
+                            <TableCell><Badge variant="outline" className="bg-muted font-normal">{accessDisplay}</Badge></TableCell>
+                            <TableCell className="text-muted-foreground text-sm truncate max-w-[120px]" title={hubName}>{hubName}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (<p className="text-sm text-muted-foreground">No tiene cursos creados.</p>)}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Ebooks Creados</CardTitle></CardHeader>
+            <CardContent>
+              {profEbooks.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Título</TableHead><TableHead>Precio</TableHead><TableHead>Acceso</TableHead><TableHead>Academia</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {profEbooks.map(e => {
+                        const hubName = profHubs.find(h => h.id === e.hub_id)?.name || 'Sin academia';
+                        const options = profPricingOptions.filter(o => o.product_id === e.id);
+                        
+                        let priceDisplay = "Gratis";
+                        let accessDisplay = "Libre";
+                        
+                        if (options.length === 1) {
+                          priceDisplay = `$${options[0].price}`;
+                          accessDisplay = options[0].type === 'one-time' ? 'Único Pago' : options[0].type === 'monthly' ? 'Mensual' : 'Anual';
+                        } else if (options.length > 1) {
+                          priceDisplay = options.map(o => `$${o.price}`).join(" / ");
+                          accessDisplay = "Múltiple";
+                        }
+
+                        return (
+                          <TableRow key={e.id}>
+                            <TableCell className="font-medium truncate max-w-[150px]" title={e.title}>{e.title}</TableCell>
+                            <TableCell className="text-muted-foreground">{priceDisplay}</TableCell>
+                            <TableCell><Badge variant="outline" className="bg-muted font-normal">{accessDisplay}</Badge></TableCell>
+                            <TableCell className="text-muted-foreground text-sm truncate max-w-[120px]" title={hubName}>{hubName}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (<p className="text-sm text-muted-foreground">No tiene ebooks creados.</p>)}
             </CardContent>
           </Card>
         </div>

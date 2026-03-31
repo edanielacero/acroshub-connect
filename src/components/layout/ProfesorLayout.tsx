@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, FolderOpen, Users, BarChart3, Settings, Menu, LogOut, ChevronDown, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Users, BarChart3, Settings, Menu, LogOut, ChevronDown, ShieldAlert, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,7 +20,7 @@ export function ProfesorLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasStudentAccess, setActiveView } = useAuth();
   const profName = user?.user_metadata?.full_name || 'Profesor';
 
   const { data: profileStatus } = useQuery({
@@ -105,10 +105,15 @@ export function ProfesorLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate('/dashboard/configuracion')}>
+              {hasStudentAccess && (
+                <DropdownMenuItem onClick={() => { setActiveView('alumno'); navigate('/mi-cuenta'); }} className="text-primary focus:bg-primary focus:text-primary-foreground font-medium cursor-pointer transition-colors">
+                  <GraduationCap className="mr-2 h-4 w-4" />Ver Mis Aprendizajes
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => navigate('/dashboard/configuracion')} className="text-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors">
                 <Settings className="mr-2 h-4 w-4" />Configuración
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={async () => { await supabase.auth.signOut(); navigate('/'); }}>
+              <DropdownMenuItem onClick={async () => { await supabase.auth.signOut(); navigate('/'); }} className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer transition-colors">
                 <LogOut className="mr-2 h-4 w-4" />Cerrar sesión
               </DropdownMenuItem>
             </DropdownMenuContent>

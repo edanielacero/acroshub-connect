@@ -19,27 +19,55 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (loading) return;
     setLoading(true);
     
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    setLoading(false);
+    try {
+      console.log("Attempting sign in with password...");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      console.log("Sign in result:", { error, userId: data?.user?.id });
+      setLoading(false);
 
-    if (error) {
-      toast.error(error.message === "Invalid login credentials" ? "Credenciales inválidas" : error.message);
-      return;
+      if (error) {
+        toast.error(error.message === "Invalid login credentials" ? "Credenciales inválidas" : error.message);
+        return;
+      }
+
+      toast.success("¡Bienvenido de vuelta!");
+      
+      // Redirigir según el rol guardado en los metadatos de Supabase
+      const role = data.user?.user_metadata?.role;
+      
+      if (role === 'super_admin') {
+        navigate("/admin");
+      } else if (role === 'profesor') {
+        // Check if this professor also has student access
+        const { count, error: countErr } = await supabase
+          .from('enrollments')
+          .select('*', { count: 'exact', head: true })
+          .eq('alumno_id', data.user.id)
+          .eq('status', 'active');
+          
+        if (countErr) console.error("Access count verify error:", countErr);
+          
+        if ((count || 0) > 0) {
+          navigate("/seleccionar-vista");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        navigate("/mi-cuenta");
+      }
+    } catch (err: any) {
+      console.error("Unhandled login exception:", err);
+      setLoading(false);
+      toast.error(err.message || "Error inesperado en la conexión.");
     }
-
-    toast.success("¡Bienvenido de vuelta!");
-    
-    // Redirigir según el rol guardado en los metadatos de Supabase
-    const role = data.user?.user_metadata?.role;
-    if (role === 'super_admin') navigate("/admin");
-    else if (role === 'profesor') navigate("/dashboard");
-    else navigate("/mi-cuenta");
   };
 
   return (

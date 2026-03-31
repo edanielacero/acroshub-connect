@@ -17,7 +17,7 @@ export const ProtectedRoute = () => {
 };
 
 export const RoleRoute = ({ allowedRoles }: { allowedRoles: ('super_admin' | 'profesor' | 'alumno')[] }) => {
-  const { session, role, loading } = useAuth();
+  const { session, role, loading, hasStudentAccess } = useAuth();
   
   if (loading) {
     return (
@@ -29,7 +29,9 @@ export const RoleRoute = ({ allowedRoles }: { allowedRoles: ('super_admin' | 'pr
   
   if (!session) return <Navigate to="/login" replace />;
   
-  if (!allowedRoles.includes(role as any)) {
+  const isProfesorWithAlumnoAccess = role === 'profesor' && hasStudentAccess && allowedRoles.includes('alumno');
+  
+  if (!allowedRoles.includes(role as any) && !isProfesorWithAlumnoAccess) {
     // Redirección de fallback si intenta entrar a un panel ajeno
     if (role === 'super_admin') return <Navigate to="/admin" replace />;
     if (role === 'profesor') return <Navigate to="/dashboard" replace />;

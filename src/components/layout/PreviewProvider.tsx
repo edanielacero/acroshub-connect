@@ -18,7 +18,7 @@ export const PreviewContext = createContext<PreviewContextType>({
 
 export function PreviewProvider({ children }: { children: ReactNode }) {
   const { slug } = useParams();
-  const { user } = useAuth();
+  const { user, activeView } = useAuth();
   
   const { data: hub } = useQuery({
     queryKey: ['hubPreviewCheck', slug],
@@ -30,7 +30,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     enabled: !!slug
   });
 
-  const isOwner = !!(user && hub && user.id === hub.profesor_id);
+  const isOwner = !!(user && hub && user.id === hub.profesor_id && activeView !== 'alumno');
 
   const [demoMode, setDemoMode] = useState<'con-acceso' | 'sin-acceso'>(
     () => (sessionStorage.getItem('acroshub_demo_mode') as 'con-acceso' | 'sin-acceso') || 'con-acceso'

@@ -121,6 +121,7 @@ serve(async (req: Request) => {
           link: "",
           already_active: true,
           student_name: existingProfile.full_name || name,
+          userId: existingProfile.id,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

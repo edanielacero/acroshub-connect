@@ -81,7 +81,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer transition-colors">
                 <LogOut className="mr-2 h-4 w-4" />Cerrar sesión
               </DropdownMenuItem>
             </DropdownMenuContent>

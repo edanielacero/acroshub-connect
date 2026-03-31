@@ -4,8 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
-import { getCurrentAlumno } from "@/data/mockData";
 import { usePreview } from "./PreviewProvider";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HubLayoutProps {
   children: ReactNode;
@@ -15,7 +15,7 @@ interface HubLayoutProps {
 
 export function HubLayout({ children, hubName, slug }: HubLayoutProps) {
   const navigate = useNavigate();
-  const alumno = getCurrentAlumno();
+  const { role, activeView, signOut, user } = useAuth();
   const { demoMode, setDemoMode, isOwner } = usePreview();
 
   return (
@@ -80,15 +80,24 @@ export function HubLayout({ children, hubName, slug }: HubLayoutProps) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2 shrink-0 hover:bg-transparent hover:text-foreground">
-                    <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-medium">
-                      {alumno.name.charAt(0)}
+                    <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-medium uppercase">
+                      {user?.user_metadata?.full_name?.charAt(0) || 'U'}
                     </div>
                     <ChevronDown className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate('/mi-cuenta')}>Mi cuenta</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/')}>
+                <DropdownMenuContent align="end" className="w-56">
+                  {role === 'profesor' && activeView !== 'profesor' && (
+                    <DropdownMenuItem className="text-primary focus:bg-primary focus:text-primary-foreground font-medium cursor-pointer transition-colors" onClick={() => navigate('/dashboard')}>
+                      Volver a Panel Profesor
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem className="text-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors" onClick={() => navigate('/alumno')}>Mis Aprendizajes</DropdownMenuItem>
+                  <DropdownMenuItem className="text-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors" onClick={() => navigate('/mi-cuenta')}>Mi cuenta</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer transition-colors" onClick={async () => {
+                    await signOut();
+                    navigate('/');
+                  }}>
                     <LogOut className="mr-2 h-4 w-4" />Cerrar sesión
                   </DropdownMenuItem>
                 </DropdownMenuContent>
