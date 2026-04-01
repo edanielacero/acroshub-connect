@@ -1,94 +1,571 @@
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { DollarSign, Shield, Palette, ArrowRight, CheckCircle } from "lucide-react";
+import { DollarSign, Shield, Zap, ArrowRight, CheckCircle, XCircle, Star, Globe, TrendingUp, Users, PlayCircle, Calculator, Table as TableIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 
-const benefits = [
-  { icon: DollarSign, title: "Sin comisiones", description: "Recibe el 100% de tus ventas. Sin intermediarios ni comisiones ocultas." },
-  { icon: Shield, title: "Videos protegidos", description: "Tu contenido está seguro. Solo tus alumnos pueden acceder." },
-  { icon: Palette, title: "Tu propia marca", description: "Personaliza tu Academia con tu logo, colores y dominio." },
+// ─── Interfaces ─────────────────────────────────────────────────────────────
+interface PlanConfig {
+  key: string;
+  name: string;
+  price: number;
+  price_annual: number;
+  max_students: number;
+  max_courses: number;
+}
+
+// ─── Data & Constants ───────────────────────────────────────────────────────
+const stats = [
+  { value: "+15", label: "Países activos", icon: Globe },
+  { value: "4.9/5", label: "Reseñas positivas", icon: Star },
+  { value: "+3,200", label: "Cursos publicados", icon: PlayCircle },
+  { value: "$0", label: "Comisiones cobradas", icon: DollarSign },
 ];
 
-const steps = [
-  { step: "1", title: "Crea tu Academia", description: "Regístrate gratis y personaliza tu academia online en minutos." },
-  { step: "2", title: "Sube tus cursos", description: "Agrega módulos, clases, videos y quizzes de forma sencilla." },
-  { step: "3", title: "Vende y crece", description: "Comparte tu link, recibe pagos y haz crecer tu comunidad." },
+const features = [
+  { 
+    icon: DollarSign, 
+    title: "100% de tus ganancias", 
+    description: "No cobramos comisiones por tus ventas. Si vendes $100, recibes $100 directo a tu cuenta bancaria." 
+  },
+  { 
+    icon: Zap, 
+    title: "Cobros inmediatos", 
+    description: "No retenemos tu dinero por 15 o 30 días. Tu dinero llega al instante a tu cuenta bancaria." 
+  },
+  { 
+    icon: Shield, 
+    title: "Videos protegidos y rápidos", 
+    description: "Alojamiento Premium (CDN Global). Tus videos cargan al instante y no pueden ser descargados fácilmente." 
+  },
+  {
+    icon: Users,
+    title: "Control total de alumnos",
+    description: "Tú decides quién entra, quién sale, y tienes acceso a todos los datos de contacto de tu comunidad."
+  }
 ];
+
+const testimonials = [
+  {
+    name: "Carlos Martínez",
+    role: "Profesor de Finanzas",
+    avatar: "CM",
+    text: "Antes usaba Hotmart y dejaba casi el 10% de mis ventas en comisiones. Al migrar a Acroshub, incrementé mis ingresos netos el primer mes. Todo llega estructurado y sin sorpresas.",
+  },
+  {
+    name: "Laura Gómez",
+    role: "Coach en Nutrición",
+    avatar: "LG",
+    text: "Estaba pagando $99/mes en otras plataformas desde el día 1 con una comunidad de apenas 5 personas. Acroshub me dio margen de respiro para arrancar.",
+  },
+  {
+    name: "David Ruiz",
+    role: "Creador Digital",
+    avatar: "DR",
+    text: "El control absoluto sobre los cobros y la presentación visual le da un toque premium a mis infoproductos que no había logrado replicar en otro lado.",
+  },
+  {
+    name: "Ana Silva",
+    role: "Instructora de Yoga",
+    avatar: "AS",
+    text: "Quería una plataforma limpia, que no me cobrara peajes por cada suscripción. La transición fue ridículamente rápida de hacer y organizar.",
+  },
+  {
+    name: "Mateo Pérez",
+    role: "Experto en IA",
+    avatar: "MP",
+    text: "Mi antiguo proveedor me retenía los fondos por 30 días. Con Acroshub, vendo una masterclass e inmediatamente tengo los fondos líquidos para reinvertir en ads.",
+  },
+  {
+    name: "Sofía Castro",
+    role: "Profesora de Idiomas",
+    avatar: "SC",
+    text: "Mis estudiantes amaron la experiencia desde que inician sesión. Cero distracciones con publicidad de otros cursos como pasaba antes, todo el foco es en mi contenido.",
+  },
+  {
+    name: "Javier Vargas",
+    role: "Músico Profesional",
+    avatar: "JV",
+    text: "La libertad de empezar sin costos iniciales fuertes hizo la diferencia. Hoy opero una academia de guitarra que escala de verdad, mi dinero es mío cien por ciento.",
+  }
+];
+
+const flags = ["🇪🇸", "🇲🇽", "🇨🇴", "🇦🇷", "🇨🇱", "🇵🇪", "🇪🇨", "🇺🇸", "🇺🇾", "🇵🇦", "🇩🇴"];
+
+// ─── Page Component ─────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const [plans, setPlans] = useState<Record<string, PlanConfig>>({});
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  
+  // Calculator State
+  const [ventasMensuales, setVentasMensuales] = useState<number>(100);
+  const [autoPlay, setAutoPlay] = useState<boolean>(true);
+
+  // Auto-play animation for the calculator slider (Fluida y ascendente a 60fps)
+  useEffect(() => {
+    if (!autoPlay) return;
+    
+    // Incrementos minúsculos para que se lean tranquilamente los números subir
+    const interval = setInterval(() => {
+      setVentasMensuales(prev => {
+        if (prev >= 10000) return 100;
+        return prev + 3; // Muy lento, excelente para leer.
+      });
+    }, 16); // ~60fps
+    return () => clearInterval(interval);
+  }, [autoPlay]);
+
+  // Calcula comisiones
+  const ticketPromedio = 50;
+  const transaccionesEstimadas = Math.ceil(ventasMensuales / ticketPromedio);
+  
+  const costoSkoolHobby = 9 + (ventasMensuales * 0.10); // $9 al mes + 10%
+  const costoSkoolPro = 99 + (ventasMensuales * 0.029); // $99 al mes + 2.9%
+  const costoHotmart = (ventasMensuales * 0.099) + (transaccionesEstimadas * 0.50);
+  
+  // Acroshub costo gradual según las ventas mensuales
+  let planSugeridoName = "Gratis";
+  let costoAcroshub = 0;
+  
+  if (ventasMensuales > 400) {
+    costoAcroshub = plans['basico'] ? plans['basico'].price : 39;
+    planSugeridoName = "Básico";
+  }
+  if (ventasMensuales >= 3000) {
+    costoAcroshub = plans['pro'] ? plans['pro'].price : 79;
+    planSugeridoName = "Pro";
+  }
+  if (ventasMensuales >= 7000) {
+    costoAcroshub = plans['premium'] ? plans['premium'].price : 149;
+    planSugeridoName = "Premium";
+  }
+  
+  const maxCosto = Math.max(costoSkoolHobby, costoSkoolPro, costoHotmart, costoAcroshub, 1);
+  
+  // Lógica de color infográfico independiente para cada competidor según su crueldad en cobro ($)
+  const getDynamicColorClasses = (costo: number) => {
+    if (costo < 100) {
+      return { bar: "bg-yellow-400 opacity-90", text: "text-foreground" };
+    } else if (costo <= 300) {
+      return { bar: "bg-orange-400 opacity-90", text: "text-orange-600" };
+    } else {
+      return { bar: "bg-red-500 opacity-90", text: "text-red-600 transition-colors duration-300" };
+    }
+  };
+
+  useEffect(() => {
+    async function fetchPlans() {
+      // Fetch all plans to have a tiered structure for the calculator
+      const { data } = await supabase
+        .from('plan_configs')
+        .select('*');
+      
+      if (data) {
+        const planMap: Record<string, PlanConfig> = {};
+        data.forEach(p => planMap[p.key] = p);
+        setPlans(planMap);
+      }
+      setLoadingPlans(false);
+    }
+    fetchPlans();
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col font-sans overflow-x-hidden selection:bg-primary/20">
       <PublicHeader />
 
-      <section className="bg-gradient-to-br from-primary/5 via-background to-primary/10 py-14 sm:py-20 lg:py-32">
-        <div className="container max-w-3xl text-center">
-          <h1 className="mb-4 text-3xl font-extrabold tracking-tight sm:text-4xl lg:mb-6 lg:text-6xl">
-            Tu plataforma de cursos, <span className="text-primary">sin comisiones</span>
-          </h1>
-          <p className="mx-auto mb-6 max-w-2xl text-base text-muted-foreground sm:text-lg lg:mb-8 lg:text-xl">
-            Vende tus cursos online. Recibe el 100% de tus ventas. Crea tu propia academia personalizada.
+      {/* ─── Hero Section ─── */}
+      <section className="relative pt-16 pb-12 md:pt-24 md:pb-16 lg:pt-28 lg:pb-20 overflow-hidden">
+        {/* Background Gradients */}
+        <div className="absolute inset-x-0 top-0 -z-10 h-[1000px] overflow-hidden">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 -z-10 opacity-30 transform-gpu blur-3xl" aria-hidden="true">
+            <div className="aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-primary to-accent opacity-30" style={{ clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)' }}></div>
+          </div>
+        </div>
+
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
+            <Badge variant="outline" className="mb-4 py-1.5 px-4 text-sm rounded-full bg-primary/5 text-primary border-primary/20 animate-fade-in">
+              🚀 La forma más inteligente de escalar online
+            </Badge>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold tracking-tight mb-6 animate-fade-in [animation-delay:100ms] text-balance">
+              Deja de regalar tus ganancias a las <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">"plataformas gratuitas"</span>
+            </h1>
+            
+            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-in [animation-delay:200ms] leading-relaxed">
+              Acroshub es la Academia definitiva para tus cursos online. Cobra directo a tu banco sin que toquemos un céntimo de tus ventas. Lanza, vende y escala tu comunidad.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto animate-fade-in [animation-delay:300ms]">
+              <Button size="lg" asChild className="h-14 px-8 text-base shadow-xl shadow-primary/20 rounded-full group">
+                <Link to="/register">
+                  Registrarse para probar gratis <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground animate-fade-in [animation-delay:400ms]">
+              Sin tarjeta de crédito. Lanza tu primer curso hoy.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Social Proof & Flags ─── */}
+      <section className="py-8 border-y bg-muted/20 overflow-hidden">
+        <div className="container px-4 mb-6">
+          <p className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-6">
+            Educadores globales confían en nuestra infraestructura
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button size="lg" asChild className="w-full px-8 text-base sm:w-auto">
-              <Link to="/register">Comenzar gratis <ArrowRight className="ml-2 h-5 w-5" /></Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild className="w-full px-8 text-base sm:w-auto">
-              <Link to="/login">Iniciar sesión</Link>
-            </Button>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            {stats.map((stat, i) => (
+              <div key={i} className="flex flex-col items-center text-center space-y-1">
+                <h4 className="text-2xl font-black">{stat.value}</h4>
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase">{stat.label}</p>
+              </div>
+            ))}
           </div>
+        </div>
+
+        {/* Marquee Flags */}
+        <div className="relative flex overflow-x-hidden w-full max-w-5xl mx-auto py-2">
+          <div className="animate-marquee flex w-max items-center">
+            {/* Multiply array to ensure it surpasses screen width massively, translating -50% loops it seamlessly */}
+            {[...flags, ...flags, ...flags, ...flags, ...flags, ...flags].map((flag, idx) => (
+              <span key={idx} className="text-[2.5rem] min-w-[70px] sm:min-w-[100px] text-center select-none opacity-80 hover:opacity-100 transition-opacity grayscale hover:grayscale-0">
+                {flag}
+              </span>
+            ))}
+          </div>
+          {/* Gradients for smooth fade on edges */}
+          <div className="absolute top-0 left-0 w-16 md:w-32 h-full bg-gradient-to-r from-background to-transparent pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-16 md:w-32 h-full bg-gradient-to-l from-background to-transparent pointer-events-none"></div>
         </div>
       </section>
 
-      <section className="py-14 sm:py-20">
-        <div className="container">
-          <h2 className="mb-8 text-center text-2xl font-bold sm:mb-12 sm:text-3xl">¿Por qué Acroshub?</h2>
-          <div className="grid gap-4 md:grid-cols-3 sm:gap-6 lg:gap-8">
-            {benefits.map(b => (
-              <div key={b.title} className="rounded-xl border bg-card p-5 text-center transition-shadow hover:shadow-md sm:p-6">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <b.icon className="h-7 w-7" />
+      {/* ─── Comparison Section (Interactive & Stacked) ─── */}
+      <section className="py-16 md:py-24 bg-background">
+        <div className="container px-4 max-w-5xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-extrabold mb-4">¿Por qué pagar comisiones?</h2>
+            <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
+              Mientras otros te cobran hasta el 10% de cada venta, en Acroshub te quedas con el 100%.
+            </p>
+          </div>
+
+          <div className="space-y-16 w-full">
+            {/* 1. Calculadora Animada */}
+            <div className="border rounded-2xl p-6 md:p-10 bg-card shadow-sm">
+              <div className="text-center mb-10">
+                <h3 className="text-xl md:text-2xl font-bold mb-6 text-muted-foreground">Imagina una facturación mensual de...</h3>
+                <div className="text-4xl md:text-6xl font-black text-primary mb-8 tracking-tighter">
+                  ${Math.floor(ventasMensuales).toLocaleString()}
                 </div>
-                <h3 className="mb-2 text-lg font-semibold">{b.title}</h3>
-                <p className="text-sm text-muted-foreground">{b.description}</p>
+                
+                <div className="max-w-2xl mx-auto px-4 mt-4 relative pointer-events-none">
+                  {/* Custom progress mock visual para la facturación ya que deshabilitamos el slider real con pointerevents para auto Play */}
+                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary" style={{ width: `${(ventasMensuales / 10000) * 100}%` }}></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-3 font-medium">
+                    <span>$100</span>
+                    <span>$10,000</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="py-4 border-t mt-8">
+                <h4 className="text-center font-bold text-lg md:text-xl mb-12 tracking-wide text-foreground/80">
+                  <span className="underline decoration-red-500 decoration-2 underline-offset-4">Esto regalarías en comisiones</span> vs <span className="text-primary font-black">Acroshub</span>
+                </h4>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 gap-y-12 items-end">
+                  {/* Skool Hobby */}
+                  <div className="flex flex-col h-[280px] md:h-full justify-end group">
+                    {/* Barra Visual */}
+                    <div className="w-full flex items-end h-[180px] mt-8">
+                      <div className={`w-full relative rounded-t-xl transition-all duration-300 ease-in-out ${getDynamicColorClasses(costoSkoolHobby).bar}`} style={{ height: `${(costoSkoolHobby / maxCosto) * 100}%`, minHeight: '4px' }}>
+                        <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max text-xl md:text-3xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoSkoolHobby).text}`}>${Math.round(costoSkoolHobby).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    {/* Contenedor de Textos Fijo p/Alinear Altura */}
+                    <div className="h-[60px] flex flex-col justify-start items-center mt-3">
+                      <div className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Skool<br className="md:hidden"/> Hobby</div>
+                    </div>
+                  </div>
+
+                  {/* Skool Pro */}
+                  <div className="flex flex-col h-[280px] md:h-full justify-end group">
+                    <div className="w-full flex items-end h-[180px] mt-8">
+                      <div className={`w-full relative rounded-t-xl transition-all duration-300 ease-in-out ${getDynamicColorClasses(costoSkoolPro).bar}`} style={{ height: `${(costoSkoolPro / maxCosto) * 100}%`, minHeight: '4px' }}>
+                        <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max text-xl md:text-3xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoSkoolPro).text}`}>${Math.round(costoSkoolPro).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div className="h-[60px] flex flex-col justify-start items-center mt-3">
+                      <div className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Skool<br className="md:hidden"/> Pro</div>
+                    </div>
+                  </div>
+
+                  {/* Hotmart */}
+                  <div className="flex flex-col h-[280px] md:h-full justify-end group">
+                    <div className="w-full flex items-end h-[180px] mt-8">
+                      <div className={`w-full relative rounded-t-xl transition-all duration-300 ease-in-out ${getDynamicColorClasses(costoHotmart).bar}`} style={{ height: `${(costoHotmart / maxCosto) * 100}%`, minHeight: '4px' }}>
+                        <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max text-xl md:text-3xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoHotmart).text}`}>${Math.round(costoHotmart).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div className="h-[60px] flex flex-col justify-start items-center mt-3">
+                      <div className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Hotmart</div>
+                    </div>
+                  </div>
+
+                  {/* Acroshub */}
+                  <div className="flex flex-col h-[280px] md:h-full justify-end relative group">
+                    <div className="w-full flex items-end h-[180px] mt-8">
+                      <div className="w-full relative bg-primary rounded-t-xl border-t-4 border-primary/20 opacity-90" style={{ height: `${(costoAcroshub / maxCosto) * 100}%`, minHeight: '4px' }}>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max text-xl md:text-3xl font-black text-center text-primary">${costoAcroshub}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Contenedor Fijo con Labels y Badges */}
+                    <div className="h-[60px] flex flex-col justify-start items-center mt-3">
+                      <div className="flex flex-col items-center justify-center gap-1.5 w-full">
+                        <div className="flex flex-col items-center justify-center gap-1.5 w-full">
+                          <span className="text-[10px] md:text-xs font-bold text-primary uppercase tracking-wider text-center">Acroshub</span>
+                          <div className="text-[8px] md:text-[9px] text-green-700 bg-green-100 font-bold py-[3px] px-1.5 rounded-full w-max tracking-wide uppercase leading-none shadow-sm">
+                            PLAN {planSugeridoName}
+                          </div>
+                        </div>
+                        <div className="bg-yellow-400 text-yellow-900 text-[8px] md:text-[10px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm text-center leading-none">
+                          ⭐ TU MEJOR OPCIÓN
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-center mt-12 gap-3">
+                <Button size="lg" asChild className="h-14 px-10 text-lg shadow-xl shadow-primary/20 rounded-full group">
+                  <Link to="/register">
+                    Empieza gratis ahora <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+                <p className="text-xs text-muted-foreground font-medium">Sin tarjeta de crédito · Sin compromiso</p>
+              </div>
+            </div>
+
+            {/* 2. Tabla Comparativa */}
+            <div className="overflow-x-auto rounded-2xl border shadow-xl bg-card">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="bg-muted/50 text-xs md:text-sm border-b">
+                    <th className="p-4 md:p-6 font-semibold w-1/4"></th>
+                    <th className="p-4 md:p-6 font-semibold text-muted-foreground w-[18%] text-center border-l bg-card">Skool Hobby</th>
+                    <th className="p-4 md:p-6 font-semibold text-muted-foreground w-[18%] text-center border-l bg-card">Skool Pro</th>
+                    <th className="p-4 md:p-6 font-semibold text-muted-foreground w-[18%] text-center border-l bg-card">Hotmart</th>
+                    <th className="p-4 md:p-6 font-bold text-primary w-[21%] border-l bg-primary/5 text-center relative">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm">⭐ RECOMENDADO</div>
+                      Acroshub
+                    </th>
+                  </tr>
+                  <tr className="bg-muted/20 text-xs md:text-sm border-b">
+                    <td colSpan={5} className="p-3 md:p-4 font-bold text-muted-foreground uppercase tracking-widest text-[11px]">Precios</td>
+                  </tr>
+                </thead>
+                <tbody className="text-sm">
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Precio mensual</td>
+                    <td className="p-4 md:p-5 border-l text-center font-medium">$9</td>
+                    <td className="p-4 md:p-5 border-l text-center font-medium">$99</td>
+                    <td className="p-4 md:p-5 border-l text-center font-medium">$0</td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold">${costoAcroshub}</td>
+                  </tr>
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Comisión por venta</td>
+                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium">10% <XCircle className="inline h-4 w-4 ml-1 opacity-70" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium">2.9% <XCircle className="inline h-4 w-4 ml-1 opacity-70" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium">9.9% + $0.50 <XCircle className="inline h-4 w-4 ml-1 opacity-70" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600 font-bold">0% <CheckCircle className="inline h-5 w-5 ml-1" /></td>
+                  </tr>
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Retención de fondos</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground">Procesador</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground">Procesador</td>
+                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium">30 días <XCircle className="inline h-4 w-4 ml-1 opacity-70" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600 font-bold">Inmediato <CheckCircle className="inline h-5 w-5 ml-1" /></td>
+                  </tr>
+                  
+                  {/* Sección Características */}
+                  <tr className="bg-muted/20 text-xs md:text-sm border-b">
+                    <td colSpan={5} className="p-3 md:p-4 font-bold text-muted-foreground uppercase tracking-widest text-[11px]">Características</td>
+                  </tr>
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Cursos ilimitados</td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                  </tr>
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Alumnos ilimitados</td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                  </tr>
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Códigos Mágicos (Regalos)</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary flex items-center justify-center gap-2">
+                      <CheckCircle className="inline h-5 w-5" /> <Badge variant="default" className="text-[9px] h-4 px-1">EXCLUSIVO</Badge>
+                    </td>
+                  </tr>
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Herramientas de Comunidad</td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-muted-foreground italic text-xs">Próximamente</td>
+                  </tr>
+
+                  {/* Sección Experiencia */}
+                  <tr className="bg-muted/20 text-xs md:text-sm border-b">
+                    <td colSpan={5} className="p-3 md:p-4 font-bold text-muted-foreground uppercase tracking-widest text-[11px]">Experiencia</td>
+                  </tr>
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Plataforma en Español</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                  </tr>
+                  <tr className="border-b hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium">Soporte nativo en Español</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                  </tr>
+                  <tr className="hover:bg-muted/10 transition-colors">
+                    <td className="p-4 md:p-5 font-medium flex flex-col justify-center h-full">Pagos manuales <span className="text-xs text-muted-foreground font-normal">(Efectivo, Transf.)</span></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary flex flex-col items-center justify-center gap-1">
+                      <CheckCircle className="inline h-5 w-5" /> <Badge variant="default" className="text-[9px] h-4 px-1">EXCLUSIVO</Badge>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              {/* Banner Final (después de la tabla) */}
+              <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6 md:p-10 text-white flex flex-col items-center text-center">
+                <h3 className="text-2xl md:text-3xl font-bold mb-4">¿Por qué elegir Acroshub?</h3>
+                <p className="text-green-50 text-base md:text-lg max-w-2xl mb-2">Precio fijo, sin comisiones, en español, con soporte real.</p>
+                <p className="font-bold text-lg md:text-xl mb-8">Tu dinero es tuyo, no nuestro.</p>
+                
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-transparent py-1.5 px-4 text-sm font-medium">💰 0% comisión</Badge>
+                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-transparent py-1.5 px-4 text-sm font-medium">🇪🇸 100% español</Badge>
+                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-transparent py-1.5 px-4 text-sm font-medium">📱 Códigos mágicos</Badge>
+                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-transparent py-1.5 px-4 text-sm font-medium">💵 Pagos manuales</Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Features Block ─── */}
+      <section className="py-12 md:py-16 bg-muted/30">
+        <div className="container px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-4xl font-bold mb-3">Todo lo que necesitas para vender</h2>
+            <p className="text-muted-foreground text-base">Hemos construido la arquitectura técnica para que tú te enfoques solo en enseñar.</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((f, i) => (
+              <div key={i} className="bg-card p-5 md:p-6 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
+                  <f.icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-bold mb-2">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-muted/40 py-14 sm:py-20">
-        <div className="container">
-          <h2 className="mb-8 text-center text-2xl font-bold sm:mb-12 sm:text-3xl">Cómo funciona</h2>
-          <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-3">
-            {steps.map(s => (
-              <div key={s.step} className="flex flex-col items-center text-center">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">{s.step}</div>
-                <h3 className="mb-2 text-lg font-semibold">{s.title}</h3>
-                <p className="text-sm text-muted-foreground">{s.description}</p>
-              </div>
-            ))}
+      {/* ─── Testimonials ─── */}
+      <section className="py-12 md:py-16 bg-muted/20 border-y border-border/50">
+        <div className="container px-4 max-w-5xl">
+          <h2 className="text-2xl md:text-4xl font-bold mb-10 text-center">Historias de éxito</h2>
+          
+          <div className="relative flex overflow-x-hidden w-full max-w-6xl mx-auto py-4">
+            <div className="animate-marquee-slow flex w-max items-center">
+              {/* Duplicar el array de 7 para el loop continuo suave */}
+              {[...testimonials, ...testimonials].map((t, i) => (
+                <div key={i} className="w-[320px] bg-background border mx-4 p-5 rounded-2xl flex flex-col justify-between hover:border-primary/30 transition-colors shrink-0 shadow-sm h-[260px]">
+                  <div className="space-y-3 mb-4">
+                    <div className="text-primary/40">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed font-medium line-clamp-4">"{t.text}"</p>
+                  </div>
+                  <div className="flex items-center gap-3 pt-3 border-t border-border/50">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                      {t.avatar}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm leading-none">{t.name}</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1">{t.role}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Sombras suaves en los bordes para difuminar entrada/salida */}
+            <div className="absolute top-0 left-0 w-16 md:w-40 h-full bg-gradient-to-r from-muted/20 via-muted/20 to-transparent pointer-events-none mix-blend-multiply dark:mix-blend-screen"></div>
+            <div className="absolute top-0 right-0 w-16 md:w-40 h-full bg-gradient-to-l from-muted/20 via-muted/20 to-transparent pointer-events-none mix-blend-multiply dark:mix-blend-screen"></div>
           </div>
         </div>
       </section>
 
-      <section className="py-14 sm:py-20">
-        <div className="container max-w-2xl text-center">
-          <CheckCircle className="mx-auto mb-4 h-12 w-12 text-primary" />
-          <h2 className="mb-4 text-2xl font-bold sm:text-3xl">¿Listo para empezar?</h2>
-          <p className="mb-6 text-muted-foreground">Crea tu cuenta gratis y empieza a vender tus cursos hoy mismo.</p>
-          <Button size="lg" asChild className="w-full px-8 text-base sm:w-auto">
-            <Link to="/register">Crear cuenta gratis</Link>
+      {/* ─── Bottom CTA ─── */}
+      <section className="py-16 md:py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-primary/5 -z-10"></div>
+        <div className="container px-4 text-center max-w-2xl">
+          <TrendingUp className="h-12 w-12 text-primary mx-auto mb-5 opacity-80" />
+          <h2 className="text-3xl md:text-5xl font-black mb-4">El momento es ahora</h2>
+          <p className="text-base md:text-lg text-muted-foreground mb-8">Únete a la revolución de creadores que están construyendo sus propios ecosistemas sin regalar sus ganancias.</p>
+          <Button size="lg" asChild className="h-14 px-8 text-lg shadow-xl shadow-primary/20 rounded-full">
+            <Link to="/register">Registrarse para probar gratis <ArrowRight className="ml-2 h-5 w-5" /></Link>
           </Button>
         </div>
       </section>
 
-      <footer className="border-t py-8">
-        <div className="container flex flex-col items-center justify-between gap-4 text-center text-sm text-muted-foreground sm:flex-row sm:text-left">
-          <span>© 2025 Acroshub. Todos los derechos reservados.</span>
-          <div className="flex flex-wrap justify-center gap-4 sm:justify-end">
-            <Link to="/" className="hover:text-foreground">Términos</Link>
-            <Link to="/" className="hover:text-foreground">Privacidad</Link>
-            <Link to="/" className="hover:text-foreground">Contacto</Link>
+      {/* ─── Footer ─── */}
+      <footer className="border-t py-8 bg-card text-muted-foreground">
+        <div className="container px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+          <div>
+            <span className="font-black text-lg text-foreground tracking-tight">ACROSHUB</span>
+            <p className="mt-1 text-xs">© {new Date().getFullYear()} Acroshub. Plataforma de EdTech libre de comisiones.</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 text-xs font-medium">
+            <Link to="/" className="hover:text-foreground transition-colors">Características</Link>
+            <Link to="/" className="hover:text-foreground transition-colors">Términos</Link>
+            <Link to="/" className="hover:text-foreground transition-colors">Privacidad</Link>
+            <Link to="/" className="hover:text-foreground transition-colors">Soporte</Link>
           </div>
         </div>
       </footer>
