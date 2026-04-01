@@ -1,12 +1,12 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { useProfesorData } from "@/hooks/useProfesorData";
+import { useProfesorData, isAtLimit, limitLabel } from "@/hooks/useProfesorData";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, BookOpen, GripVertical, Plus, Loader2, UploadCloud, Trash2, Settings, Pencil } from "lucide-react";
+import { ArrowLeft, BookOpen, GripVertical, Plus, Loader2, UploadCloud, Trash2, Settings, Pencil, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -21,10 +21,13 @@ export default function ProfesorHubCursos() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { hubs, courses, pricingOptions = [], isLoading } = useProfesorData();
+  const { hubs, courses, pricingOptions = [], planConfig, isLoading } = useProfesorData();
   
   const hub = hubs.find((h: any) => h.id === id);
   const hubCourses = courses.filter((c: any) => c.hub_id === id);
+
+  // Check course limit (global across all hubs for this professor)
+  const coursesAtLimit = isAtLimit(courses.length, planConfig?.max_courses ?? -1);
 
   // Helper: get pricing for a given course
   const getPricing = (courseId: string) => pricingOptions.filter((p: any) => p.product_id === courseId);
@@ -53,6 +56,10 @@ export default function ProfesorHubCursos() {
   const handleCreateCourse = async () => {
     if (!newCourseName.trim()) { toast.error("El nombre del curso es requerido"); return; }
     if (!hasLifetime && !hasMonthly && !hasAnnual) { toast.error("Debes seleccionar al menos un modo de suscripción"); return; }
+    if (coursesAtLimit) {
+      toast.error(`Has alcanzado el límite de cursos de tu plan (${planConfig?.max_courses}). Actualiza tu plan para crear más.`);
+      return;
+    }
     
     setIsCreating(true);
 
@@ -266,12 +273,21 @@ export default function ProfesorHubCursos() {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4">
           <h3 className="font-semibold text-lg items-center flex gap-2"><BookOpen className="h-5 w-5 text-primary" /> Inventario de Cursos</h3>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="w-full sm:w-auto">
-                <Plus className="mr-1 h-4 w-4" />Crear curso
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-3">
+            {planConfig && (
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${
+                coursesAtLimit ? 'bg-red-50 text-red-600 border-red-200' : 'bg-muted text-muted-foreground border-border'
+              }`}>
+                Cursos: {limitLabel(courses.length, planConfig.max_courses)}
+              </span>
+            )}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="w-full sm:w-auto" disabled={coursesAtLimit}>
+                  {coursesAtLimit ? <Lock className="mr-1 h-4 w-4" /> : <Plus className="mr-1 h-4 w-4" />}
+                  {coursesAtLimit ? 'Límite alcanzado' : 'Crear curso'}
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Crear nuevo curso</DialogTitle>
@@ -446,7 +462,8 @@ export default function ProfesorHubCursos() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         <div className="space-y-3">

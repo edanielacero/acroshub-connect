@@ -1,12 +1,12 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { useProfesorData } from "@/hooks/useProfesorData";
+import { useProfesorData, isAtLimit, limitLabel } from "@/hooks/useProfesorData";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { FolderOpen, Plus, CheckCircle2, Loader2, BookOpen, Book, Pencil, Eye } from "lucide-react";
+import { FolderOpen, Plus, CheckCircle2, Loader2, BookOpen, Book, Pencil, Eye, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -20,7 +20,9 @@ export default function ProfesorHubs() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { hubs: profHubs = [], courses = [], ebooks = [], isLoading } = useProfesorData();
+  const { hubs: profHubs = [], courses = [], ebooks = [], planConfig, isLoading } = useProfesorData();
+
+  const hubsAtLimit = isAtLimit(profHubs.length, planConfig?.max_hubs ?? -1);
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -49,6 +51,10 @@ export default function ProfesorHubs() {
     e.preventDefault();
     if (!newHubName || !newHubSlug) {
       toast.error("El nombre y el slug URL son obligatorios.");
+      return;
+    }
+    if (hubsAtLimit) {
+      toast.error(`Has alcanzado el límite de academias de tu plan (${planConfig?.max_hubs}). Actualiza tu plan para crear más.`);
       return;
     }
     
@@ -98,10 +104,21 @@ export default function ProfesorHubs() {
             <h1 className="text-2xl font-bold">Mis Academias</h1>
             <p className="text-sm text-muted-foreground mt-1">Una Academia te permite agrupar varios Cursos y Ebooks de un mismo tema para ofrecerlos juntos a tus alumnos.</p>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Crear Academia</Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-3">
+            {planConfig && (
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${
+                hubsAtLimit ? 'bg-red-50 text-red-600 border-red-200' : 'bg-muted text-muted-foreground border-border'
+              }`}>
+                Academias: {limitLabel(profHubs.length, planConfig.max_hubs)}
+              </span>
+            )}
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto" disabled={hubsAtLimit}>
+                  {hubsAtLimit ? <Lock className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                  {hubsAtLimit ? 'Límite alcanzado' : 'Crear Academia'}
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Crear nueva Academia</DialogTitle>
@@ -177,7 +194,8 @@ export default function ProfesorHubs() {
                 </DialogFooter>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

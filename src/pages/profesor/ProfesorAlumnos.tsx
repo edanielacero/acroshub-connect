@@ -1,5 +1,5 @@
 import { ProfesorLayout } from "@/components/layout/ProfesorLayout";
-import { useProfesorData } from "@/hooks/useProfesorData";
+import { useProfesorData, isAtLimit, limitLabel } from "@/hooks/useProfesorData";
 import { useInvitations, useInviteStudent, useResendInvitation, useDeleteInvitation } from "@/hooks/useInvitations";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, UserPlus, Send, Clock, RefreshCw, Copy, CheckCircle, Loader2, AlertTriangle, Trash2 } from "lucide-react";
+import { Search, UserPlus, Send, Clock, RefreshCw, Copy, CheckCircle, Loader2, AlertTriangle, Trash2, Lock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDateProject } from "@/lib/utils";
@@ -20,7 +20,7 @@ import { Link } from "react-router-dom";
 
 export default function ProfesorAlumnos() {
   const { user } = useAuth();
-  const { enrollments: profSales, courses, ebooks, profile, isLoading, pricingOptions, transactions } = useProfesorData();
+  const { enrollments: profSales, courses, ebooks, profile, isLoading, pricingOptions, transactions, planConfig } = useProfesorData();
   const { data: invitations = [], isLoading: loadingInv } = useInvitations();
   const inviteStudent = useInviteStudent();
   const resendInvitation = useResendInvitation();
@@ -224,6 +224,10 @@ export default function ProfesorAlumnos() {
     }));
 
   const allStudents = [...pendingStudents, ...activeStudents];
+
+  // Check student limit against active (not pending) students
+  const studentsAtLimit = isAtLimit(activeStudents.length, planConfig?.max_students ?? -1);
+
   const filtered = allStudents.filter(a =>
     a.name.toLowerCase().includes(search.toLowerCase()) ||
     (a.email || "").toLowerCase().includes(search.toLowerCase())
@@ -250,12 +254,21 @@ export default function ProfesorAlumnos() {
             </p>
           </div>
 
-          <Dialog open={isAddOpen} onOpenChange={(o) => { setIsAddOpen(o); if (!o) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto">
-                <UserPlus className="mr-2 h-4 w-4" /> Agregar alumno
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-3">
+            {planConfig && (
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${
+                studentsAtLimit ? 'bg-red-50 text-red-600 border-red-200' : 'bg-muted text-muted-foreground border-border'
+              }`}>
+                Alumnos: {limitLabel(activeStudents.length, planConfig.max_students)}
+              </span>
+            )}
+            <Dialog open={isAddOpen} onOpenChange={(o) => { setIsAddOpen(o); if (!o) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto" disabled={studentsAtLimit}>
+                  {studentsAtLimit ? <Lock className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                  {studentsAtLimit ? 'Límite alcanzado' : 'Agregar alumno'}
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[480px]">
               <DialogHeader>
                 <DialogTitle>Agregar alumno</DialogTitle>
@@ -430,7 +443,8 @@ export default function ProfesorAlumnos() {
                 </form>
               )}
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {/* Search */}

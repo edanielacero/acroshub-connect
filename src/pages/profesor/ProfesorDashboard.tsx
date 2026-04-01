@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 
 export default function ProfesorDashboard() {
   const { user } = useAuth();
-  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, pricingOptions: profPricing, lessons: profLessons, comments: profComments, transactions, profile, isLoading } = useProfesorData();
+  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, pricingOptions: profPricing, lessons: profLessons, comments: profComments, transactions, profile, planConfig, isLoading } = useProfesorData();
 
   const prof = {
     id: user?.id || '',
@@ -207,6 +207,62 @@ export default function ProfesorDashboard() {
           <MetricCard title="Cursos" value={profCourses.length} icon={<BookOpen className="h-6 w-6" />} />
           <MetricCard title="E-books" value={profEbooks.length} icon={<Book className="h-6 w-6" />} />
         </div>
+
+        {/* Plan Usage Card */}
+        {planConfig && (() => {
+          const totalStudents2 = new Set([...profSales.map((s: any) => s.alumno_id), ...transactions.map((t: any) => t.alumno_id)]).size;
+          const planItems = [
+            { label: 'Academias', current: profHubs.length, max: planConfig.max_hubs },
+            { label: 'Cursos', current: profCourses.length, max: planConfig.max_courses },
+            { label: 'Ebooks', current: profEbooks.length, max: planConfig.max_ebooks },
+            { label: 'Alumnos', current: totalStudents2, max: planConfig.max_students },
+          ];
+          return (
+            <Card className="mt-2">
+              <CardHeader className="pb-3 border-b bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Crown className="h-5 w-5 text-primary" /> Uso de tu Plan
+                  </CardTitle>
+                  <span className="text-xs font-semibold uppercase px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {planConfig.name}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {planItems.map(item => {
+                    const pct = item.max === -1 ? 0 : Math.min(100, Math.round((item.current / item.max) * 100));
+                    const atLimit = item.max !== -1 && item.current >= item.max;
+                    const nearLimit = item.max !== -1 && pct >= 80 && !atLimit;
+                    const barColor = atLimit ? 'bg-red-500' : nearLimit ? 'bg-amber-500' : 'bg-primary';
+                    return (
+                      <div key={item.label} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{item.label}</span>
+                          <span className={`text-xs font-semibold ${
+                            atLimit ? 'text-red-600' : nearLimit ? 'text-amber-600' : 'text-muted-foreground'
+                          }`}>
+                            {item.max === -1 ? `${item.current} / ∞` : `${item.current} / ${item.max}`}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                            style={{ width: item.max === -1 ? '4%' : `${pct}%` }}
+                          />
+                        </div>
+                        {atLimit && (
+                          <p className="text-xs text-red-600 font-medium">Límite alcanzado</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         <div className="space-y-6 pt-6 border-t mt-8">
           {/* Alumnos por renovar */}

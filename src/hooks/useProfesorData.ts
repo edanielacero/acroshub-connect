@@ -2,6 +2,32 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
+export interface PlanConfig {
+  id: string;
+  key: string;
+  name: string;
+  price: number;
+  price_annual: number;
+  max_hubs: number;
+  max_students: number;
+  max_courses: number;
+  max_lessons_per_course: number;
+  max_ebooks: number;
+}
+
+// Helper: returns true if the limit has been reached
+// -1 means unlimited, so it never blocks
+export function isAtLimit(current: number, max: number): boolean {
+  if (max === -1) return false;
+  return current >= max;
+}
+
+// Helper: returns a display string like "2/5" or "∞"
+export function limitLabel(current: number, max: number): string {
+  if (max === -1) return `${current} / ∞`;
+  return `${current} / ${max}`;
+}
+
 export function useProfesorData() {
   const { user } = useAuth();
   const profesorId = user?.id;
@@ -14,6 +40,25 @@ export function useProfesorData() {
       return data;
     },
     enabled: !!profesorId
+  });
+
+  // Fetch plan config based on the professor's current plan key
+  const planKey = (profile as any)?.plan || 'gratis';
+  const { data: planConfig = null, isLoading: loadingPlan } = useQuery<PlanConfig | null>({
+    queryKey: ['plan_config', planKey],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('plan_configs')
+        .select('*')
+        .eq('key', planKey)
+        .single();
+      if (error) {
+        console.warn('Could not load plan config for key:', planKey, error.message);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!planKey
   });
 
   const { data: hubs = [], isLoading: loadingHubs } = useQuery({
@@ -118,7 +163,7 @@ export function useProfesorData() {
     enabled: productIds.length > 0
   });
 
-  const isLoading = loadingProfile || loadingHubs || loadingCourses || loadingEbooks || loadingEnrollments || loadingPricing || loadingLessons || loadingComments || loadingTransactions;
+  const isLoading = loadingProfile || loadingPlan || loadingHubs || loadingCourses || loadingEbooks || loadingEnrollments || loadingPricing || loadingLessons || loadingComments || loadingTransactions;
 
-  return { profile, hubs, courses, ebooks, enrollments, pricingOptions, lessons, comments, transactions, isLoading };
+  return { profile, planConfig, planKey, hubs, courses, ebooks, enrollments, pricingOptions, lessons, comments, transactions, isLoading };
 }
