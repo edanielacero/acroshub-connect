@@ -44,3 +44,34 @@ CREATE POLICY "Only admin can modify plan_configs" ON public.plan_configs
       SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'
     )
   );
+
+-- ==========================================
+-- PLATFORM COSTS TABLE
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.platform_costs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  amount NUMERIC(10, 4) NOT NULL,
+  unit TEXT NOT NULL CHECK (unit IN ('per_gb_month', 'flat_month', 'per_profesor_month')),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Seed: Bunny.net storage cost
+INSERT INTO public.platform_costs (name, amount, unit, notes)
+VALUES ('Bunny.net Storage', 0.03, 'per_gb_month', 'Costo mensual de almacenamiento de video y archivos en Bunny.net')
+ON CONFLICT DO NOTHING;
+
+-- RLS for platform_costs
+ALTER TABLE public.platform_costs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Only super_admin can manage costs" ON public.platform_costs;
+CREATE POLICY "Only super_admin can manage costs" ON public.platform_costs
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'
+    )
+  );
+
