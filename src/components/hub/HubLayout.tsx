@@ -71,9 +71,9 @@ export function HubLayout() {
   let backText = "Volver al Inicio";
 
   if (location.pathname.includes('/clase/') || location.pathname.includes('/curso/') || location.pathname.includes('/ebook/')) {
-    backLink = `/${hub.slug}/productos`;
+    backLink = `/${hub.slug}`;
     backText = `Volver a ${hub.name}`;
-  } else if (location.pathname.endsWith('/productos') || location.pathname === `/${hub.slug}`) {
+  } else if (location.pathname === `/${hub.slug}`) {
     backLink = "/mi-cuenta";
     backText = "Volver al Inicio";
   }

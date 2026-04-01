@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { BookOpen, GraduationCap, Loader2 } from "lucide-react";
+import { BookOpen, GraduationCap, Loader2, Sparkles } from "lucide-react";
 
 export default function AlumnoDashboard() {
   const { profile, hubs, enrollments, isLoading } = useAlumnoData();
@@ -33,9 +33,17 @@ export default function AlumnoDashboard() {
 
   return (
     <div className="container py-8 sm:py-12 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Hola {nombre} 👋</h1>
-        <p className="text-muted-foreground mt-2">Aquí están todos tus cursos y profesores</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Hola {nombre} 👋</h1>
+          <p className="text-muted-foreground mt-2">Aquí están todos tus cursos y profesores</p>
+        </div>
+        <Button asChild className="shrink-0 group">
+          <Link to="/activar-codigo">
+            <Sparkles className="h-4 w-4 mr-2 group-hover:text-amber-300 transition-colors" />
+            Activar con código
+          </Link>
+        </Button>
       </div>
 
       {hubsConAcceso.length > 0 ? (
@@ -61,7 +69,7 @@ export default function AlumnoDashboard() {
                   </div>
                 </div>
                 <Button className="w-full mt-6" asChild>
-                  <Link to={`/${hub.slug}/productos`}>Entrar a la Academia</Link>
+                  <Link to={`/${hub.slug}`}>Entrar a la Academia</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -71,9 +79,15 @@ export default function AlumnoDashboard() {
         <div className="text-center py-24 bg-card border rounded-2xl shadow-sm">
           <GraduationCap className="h-16 w-16 mx-auto text-muted-foreground/30" />
           <h2 className="mt-6 text-2xl font-semibold">Aún no tienes cursos</h2>
-          <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+          <p className="text-muted-foreground mt-2 max-w-md mx-auto mb-6">
             Cuando compres o te inscriban en un curso de algún profesor, aparecerá aquí en tu cuenta global.
           </p>
+          <Button variant="outline" asChild>
+            <Link to="/activar-codigo">
+              <Sparkles className="h-4 w-4 mr-2 text-primary" />
+              Tengo un código mágico
+            </Link>
+          </Button>
         </div>
       )}
     </div>

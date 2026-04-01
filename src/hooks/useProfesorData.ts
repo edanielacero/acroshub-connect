@@ -104,7 +104,7 @@ export function useProfesorData() {
       if (error) throw error;
       return data;
     },
-    enabled: productIds.length > 0
+    enabled: !!profesorId
   });
 
   const { data: pricingOptions = [], isLoading: loadingPricing } = useQuery({
@@ -118,7 +118,7 @@ export function useProfesorData() {
       if (error) throw error;
       return data;
     },
-    enabled: productIds.length > 0
+    enabled: !!profesorId
   });
 
   const { data: lessons = [], isLoading: loadingLessons } = useQuery({
@@ -132,7 +132,7 @@ export function useProfesorData() {
       if (error) throw error;
       return data;
     },
-    enabled: courses.length > 0
+    enabled: !!profesorId
   });
 
   const { data: comments = [], isLoading: loadingComments } = useQuery({
@@ -146,7 +146,7 @@ export function useProfesorData() {
       if (error) throw error;
       return data;
     },
-    enabled: lessons.length > 0
+    enabled: !!profesorId
   });
 
   const { data: transactions = [], isLoading: loadingTransactions } = useQuery({
@@ -160,10 +160,17 @@ export function useProfesorData() {
       if (error) throw error;
       return data;
     },
-    enabled: productIds.length > 0
+    enabled: !!profesorId
   });
 
-  const isLoading = loadingProfile || loadingPlan || loadingHubs || loadingCourses || loadingEbooks || loadingEnrollments || loadingPricing || loadingLessons || loadingComments || loadingTransactions;
+  const isCriticalLoading = loadingProfile || loadingPlan || loadingHubs || loadingCourses || loadingEbooks;
+  
+  // Retrocompatibilidad con components que esperan un bool general, pero más rápido
+  const isLoading = isCriticalLoading;
 
-  return { profile, planConfig, planKey, hubs, courses, ebooks, enrollments, pricingOptions, lessons, comments, transactions, isLoading };
+  return { 
+    profile, planConfig, planKey, hubs, courses, ebooks, enrollments, pricingOptions, lessons, comments, transactions, 
+    isLoading, // Rápido, ideal para Dashboard Layout
+    loadingEnrollments, loadingPricing, loadingLessons, loadingComments, loadingTransactions // Específicos para evitar parpadeos en tablas
+  };
 }

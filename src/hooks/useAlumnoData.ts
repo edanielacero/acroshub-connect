@@ -43,7 +43,7 @@ export function useAlumnoData() {
       if (error) throw error;
       return data;
     },
-    enabled: productIds.length > 0
+    enabled: !!alumnoId
   });
 
   const { data: ebooks = [], isLoading: loadingEbooks } = useQuery({
@@ -57,7 +57,7 @@ export function useAlumnoData() {
       if (error) throw error;
       return data;
     },
-    enabled: productIds.length > 0
+    enabled: !!alumnoId
   });
 
   // Calculate unique hub IDs from the accessible products
@@ -77,7 +77,7 @@ export function useAlumnoData() {
       if (error) throw error;
       return data;
     },
-    enabled: hubIds.length > 0
+    enabled: !!alumnoId
   });
 
   const { data: pricingOptions = [], isLoading: loadingPricing } = useQuery({
@@ -91,7 +91,7 @@ export function useAlumnoData() {
       if (error) throw error;
       return data;
     },
-    enabled: productIds.length > 0
+    enabled: !!alumnoId
   });
 
   const { data: transactions = [], isLoading: loadingTransactions } = useQuery({
@@ -108,7 +108,8 @@ export function useAlumnoData() {
     enabled: !!alumnoId
   });
 
-  const isLoading = loadingProfile || loadingEnrollments || loadingCourses || loadingEbooks || loadingHubs || loadingTransactions || loadingPricing;
+  const isCriticalLoading = loadingProfile || loadingEnrollments || loadingHubs;
+  const isLoading = isCriticalLoading;
 
   return { 
     profile, 
@@ -118,6 +119,7 @@ export function useAlumnoData() {
     hubs, 
     transactions,
     pricingOptions,
-    isLoading 
+    isLoading,
+    loadingCourses, loadingEbooks, loadingTransactions, loadingPricing
   };
 }

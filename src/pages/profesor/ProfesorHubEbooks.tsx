@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Book, BookCopy, GripVertical, Plus, Loader2, UploadCloud, Trash2, Settings, Pencil, Lock } from "lucide-react";
+import { ArrowLeft, Book, BookCopy, GripVertical, Plus, Loader2, UploadCloud, Trash2, Settings, Pencil, Lock, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -469,7 +469,12 @@ export default function ProfesorHubEbooks() {
                       <p className="text-sm text-muted-foreground mt-0.5">{getPriceLabel(eb.id)}</p>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0 sm:flex-row shrink-0">
+                  <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0 sm:flex-row shrink-0 flex-wrap justify-end">
+                    <Button variant="outline" size="sm" asChild className="w-full sm:w-auto border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground">
+                      <Link to={`/dashboard/productos/ebook/${eb.id}/codigos`}>
+                        <Sparkles className="mr-1.5 h-3.5 w-3.5" />Códigos
+                      </Link>
+                    </Button>
                     <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setEditingEbook(eb)}>
                       <Settings className="mr-1.5 h-3.5 w-3.5" />Configuración
                     </Button>

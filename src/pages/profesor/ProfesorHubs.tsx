@@ -83,7 +83,7 @@ export default function ProfesorHubs() {
   };
 
   const handleViewAsStudent = (hub: any) => {
-    navigate(`/${hub.slug}/productos`);
+    navigate(`/${hub.slug}`);
   };
 
   if (isLoading) {

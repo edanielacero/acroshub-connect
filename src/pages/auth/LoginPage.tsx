@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,29 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
+  const { session, role } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Si ya tiene sesión, redirigirlo a su panel usando useEffect
+  useEffect(() => {
+    if (session) {
+      if (role === 'super_admin') {
+        navigate("/admin");
+      } else if (role === 'profesor') {
+        navigate("/dashboard");
+      } else {
+        navigate("/mi-cuenta");
+      }
+    }
+  }, [session, role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,12 +99,28 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="tu@email.com" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                onKeyDown={e => { if (e.key === 'Enter') handleSubmit(e) }}
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
               <div className="relative">
-                <Input id="password" type={showPw ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+                <Input 
+                  id="password" 
+                  type={showPw ? "text" : "password"} 
+                  placeholder="••••••••" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  onKeyDown={e => { if (e.key === 'Enter') handleSubmit(e) }}
+                  required 
+                />
                 <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" onClick={() => setShowPw(!showPw)}>
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>

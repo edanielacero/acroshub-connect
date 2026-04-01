@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function ProfesorVentas() {
-  const { enrollments: profSales, courses, ebooks, pricingOptions, transactions, isLoading } = useProfesorData();
+  const { enrollments: profSales, courses, ebooks, pricingOptions, transactions, isLoading, loadingTransactions, loadingEnrollments } = useProfesorData();
   
   const [salesPage, setSalesPage] = useState(1);
   const salesPerPage = 5;
@@ -68,7 +68,9 @@ export default function ProfesorVentas() {
     { month: 'Mar', ventas: thisMonthAmount },
   ];
 
-  if (isLoading) {
+  const tableLoading = isLoading || loadingTransactions || loadingEnrollments;
+
+  if (tableLoading) {
     return (
       <ProfesorLayout>
         <div className="flex h-[50vh] items-center justify-center">

@@ -20,7 +20,7 @@ import { Link } from "react-router-dom";
 
 export default function ProfesorAlumnos() {
   const { user } = useAuth();
-  const { enrollments: profSales, courses, ebooks, profile, isLoading, pricingOptions, transactions, planConfig } = useProfesorData();
+  const { enrollments: profSales, courses, ebooks, profile, isLoading, pricingOptions, transactions, planConfig, loadingEnrollments, loadingTransactions } = useProfesorData();
   const { data: invitations = [], isLoading: loadingInv } = useInvitations();
   const inviteStudent = useInviteStudent();
   const resendInvitation = useResendInvitation();
@@ -233,7 +233,9 @@ export default function ProfesorAlumnos() {
     (a.email || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  if (isLoading || loadingInv) {
+  const tableLoading = isLoading || loadingEnrollments || loadingTransactions || loadingInv;
+
+  if (tableLoading) {
     return (
       <ProfesorLayout>
         <div className="flex h-[50vh] items-center justify-center">

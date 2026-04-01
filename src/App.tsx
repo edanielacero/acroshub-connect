@@ -32,6 +32,7 @@ import ProfesorAlumnos from "./pages/profesor/ProfesorAlumnos";
 import ProfesorAlumnoDetail from "./pages/profesor/ProfesorAlumnoDetail";
 import ProfesorVentas from "./pages/profesor/ProfesorVentas";
 import ProfesorConfiguracion from "./pages/profesor/ProfesorConfiguracion";
+import ProfesorCodigosMagicos from "./pages/profesor/ProfesorCodigosMagicos";
 
 import HubLanding from "./pages/hub/HubLanding";
 import CursoDetalle from "./pages/hub/CursoDetalle";
@@ -43,6 +44,7 @@ import { PreviewProvider } from "./components/layout/PreviewProvider";
 import AlumnoDashboard from "./pages/alumno/AlumnoDashboard";
 import AlumnoAjustes from "./pages/alumno/AlumnoAjustes";
 import AlumnoPagos from "./pages/alumno/AlumnoPagos";
+import ActivarCodigo from "./pages/alumno/ActivarCodigo";
 import { AlumnoLayout } from "./components/alumno/AlumnoLayout";
 import { HubLayout } from "./components/hub/HubLayout";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -94,6 +96,7 @@ const App = () => (
               <Route path="/dashboard/alumnos/:id" element={<ProfesorAlumnoDetail />} />
               <Route path="/dashboard/ventas" element={<ProfesorVentas />} />
               <Route path="/dashboard/configuracion" element={<ProfesorConfiguracion />} />
+              <Route path="/dashboard/productos/:type/:id/codigos" element={<ProfesorCodigosMagicos />} />
             </Route>
 
             {/* Alumno */}
@@ -102,6 +105,7 @@ const App = () => (
                 <Route path="/mi-cuenta" element={<AlumnoDashboard />} />
                 <Route path="/mis-ajustes" element={<AlumnoAjustes />} />
                 <Route path="/mis-pagos" element={<AlumnoPagos />} />
+                <Route path="/activar-codigo" element={<ActivarCodigo />} />
               </Route>
             </Route>
 
@@ -111,10 +115,9 @@ const App = () => (
                 <HubLayout />
               </PreviewProvider>
             }>
-              <Route index element={<HubLanding />} />
+              <Route index element={<HubProductos />} />
               <Route path="curso/:id" element={<CursoDetalle />} />
               <Route path="ebook/:id" element={<EbookDetalle />} />
-              <Route path="productos" element={<HubProductos />} />
               <Route path="clase/:id" element={<ClaseReproductor />} />
             </Route>
 

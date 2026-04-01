@@ -71,12 +71,6 @@ export function HubLayout({ children, hubName, slug }: HubLayoutProps) {
               <span className="truncate">{hubName}</span>
             </Link>
             <nav className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:justify-end sm:overflow-visible sm:pb-0">
-              <Button variant="ghost" size="sm" asChild className="shrink-0">
-                <Link to={`/${slug}/descubrir`}><Compass className="mr-1.5 h-4 w-4" />Descubrir</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild className="shrink-0">
-                <Link to={`/${slug}/mis-productos`}><Package className="mr-1.5 h-4 w-4" />Mis productos</Link>
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2 shrink-0 hover:bg-transparent hover:text-foreground">
