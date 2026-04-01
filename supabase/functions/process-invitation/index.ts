@@ -182,6 +182,7 @@ serve(async (req: Request) => {
 
     // Send activation email
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "Acroshub <hola@acroshub.com>";
     const activationLink = `${appUrl}/activar-cuenta?token=${token}`;
     let emailSent = false;
 
@@ -194,7 +195,7 @@ serve(async (req: Request) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Acroshub <onboarding@resend.dev>",
+            from: RESEND_FROM_EMAIL,
             to: [email.trim()],
             subject: productId ? `¡Bienvenido! Activa tu cuenta para acceder a ${productTitle || "tu curso"}` : `¡Bienvenido! Activa tu cuenta en la plataforma`,
             html: `

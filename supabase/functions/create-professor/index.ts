@@ -98,7 +98,7 @@ serve(async (req: Request) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Acroshub <onboarding@resend.dev>",
+            from: Deno.env.get("RESEND_FROM_EMAIL") || "Acroshub <hola@acroshub.com>",
             to: [cleanEmail],
             subject: "¡Tu cuenta de profesor en Acroshub está lista!",
             html: `

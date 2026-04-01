@@ -1,7 +1,8 @@
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { DollarSign, Shield, Zap, ArrowRight, CheckCircle, XCircle, Star, Globe, TrendingUp, Users, PlayCircle, Calculator, Table as TableIcon } from "lucide-react";
+import { DollarSign, Shield, Zap, ArrowRight, CheckCircle, XCircle, Star, Globe, Users, PlayCircle, Calculator, Table as TableIcon } from "lucide-react";
+import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
@@ -236,7 +237,7 @@ export default function LandingPage() {
           <div className="animate-marquee flex w-max items-center">
             {/* Multiply array to ensure it surpasses screen width massively, translating -50% loops it seamlessly */}
             {[...flags, ...flags, ...flags, ...flags, ...flags, ...flags].map((flag, idx) => (
-              <span key={idx} className="text-[2.5rem] min-w-[70px] sm:min-w-[100px] text-center select-none opacity-80 hover:opacity-100 transition-opacity grayscale hover:grayscale-0">
+              <span key={idx} className="text-[2.5rem] min-w-[70px] sm:min-w-[100px] text-center select-none">
                 {flag}
               </span>
             ))}
@@ -248,235 +249,209 @@ export default function LandingPage() {
       </section>
 
       {/* ─── Comparison Section (Interactive & Stacked) ─── */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="container px-4 max-w-5xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-extrabold mb-4">¿Por qué pagar comisiones?</h2>
-            <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-              Mientras otros te cobran hasta el 10% de cada venta, en Acroshub te quedas con el 100%.
+      <section className="py-8 md:py-16 bg-background min-h-[90vh] flex items-center" id="comparativa">
+        <div className="container px-4 max-w-6xl">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl md:text-5xl font-extrabold mb-4">Ahorra miles de dólares</h2>
+            <p className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto">
+              Mientras otros se quedan con un porcentaje de tu esfuerzo, en Acroshub el 100% es para ti.
             </p>
           </div>
 
-          <div className="space-y-16 w-full">
-            {/* 1. Calculadora Animada */}
-            <div className="border rounded-2xl p-6 md:p-10 bg-card shadow-sm">
-              <div className="text-center mb-10">
-                <h3 className="text-xl md:text-2xl font-bold mb-6 text-muted-foreground">Imagina una facturación mensual de...</h3>
-                <div className="text-4xl md:text-6xl font-black text-primary mb-8 tracking-tighter">
-                  ${Math.floor(ventasMensuales).toLocaleString()}
-                </div>
+          <div className="space-y-12 w-full">
+            {/* 1. Calculadora Animada Rediseñada */}
+            <div className="border rounded-3xl p-6 md:p-10 lg:p-12 bg-card shadow-2xl relative overflow-hidden group">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                 
-                <div className="max-w-2xl mx-auto px-4 mt-4 relative pointer-events-none">
-                  {/* Custom progress mock visual para la facturación ya que deshabilitamos el slider real con pointerevents para auto Play */}
-                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: `${(ventasMensuales / 10000) * 100}%` }}></div>
+                {/* ── Columna Izquierda: Counter & Info ── */}
+                <div className="lg:col-span-4 flex flex-col justify-center h-full space-y-6 md:space-y-8">
+                  <div className="space-y-2">
+                    <Badge variant="outline" className="py-1 px-3 text-[10px] uppercase tracking-tighter text-primary border-primary/20 bg-primary/5">Calculadora de Comisiones</Badge>
+                    <h3 className="text-lg md:text-2xl font-bold text-foreground">Imagina facturar al mes...</h3>
                   </div>
-                  <div className="flex justify-between text-xs text-muted-foreground mt-3 font-medium">
-                    <span>$100</span>
-                    <span>$10,000</span>
+
+                  <div className="text-5xl md:text-7xl font-black text-primary tracking-tighter tabular-nums drop-shadow-sm select-none">
+                    ${Math.floor(ventasMensuales).toLocaleString()}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="relative pointer-events-none w-full">
+                      <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden shadow-inner">
+                        <div className="h-full bg-primary shadow-[0_0_20px_rgba(var(--primary),0.4)]" style={{ width: `${(ventasMensuales / 10000) * 100}%` }}></div>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-muted-foreground mt-3 font-semibold uppercase tracking-widest">
+                        <span>$100</span>
+                        <span>$10,000+</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="py-4 border-t mt-8">
-                <h4 className="text-center font-bold text-lg md:text-xl mb-12 tracking-wide text-foreground/80">
-                  <span className="underline decoration-red-500 decoration-2 underline-offset-4">Esto regalarías en comisiones</span> vs <span className="text-primary font-black">Acroshub</span>
-                </h4>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 gap-y-12 items-end">
-                  {/* Skool Hobby */}
-                  <div className="flex flex-col h-[280px] md:h-full justify-end group">
-                    {/* Barra Visual */}
-                    <div className="w-full flex items-end h-[180px] mt-8">
-                      <div className={`w-full relative rounded-t-xl transition-all duration-300 ease-in-out ${getDynamicColorClasses(costoSkoolHobby).bar}`} style={{ height: `${(costoSkoolHobby / maxCosto) * 100}%`, minHeight: '4px' }}>
-                        <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max text-xl md:text-3xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoSkoolHobby).text}`}>${Math.round(costoSkoolHobby).toLocaleString()}</div>
-                      </div>
-                    </div>
-                    {/* Contenedor de Textos Fijo p/Alinear Altura */}
-                    <div className="h-[60px] flex flex-col justify-start items-center mt-3">
-                      <div className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Skool<br className="md:hidden"/> Hobby</div>
-                    </div>
+                {/* ── Separador Visual en Desktop ── */}
+                <div className="hidden lg:block lg:col-span-1 h-full w-px bg-border/60 mx-auto"></div>
+
+                {/* ── Columna Derecha: El Gráfico ── */}
+                <div className="lg:col-span-7">
+                  <div className="text-center lg:text-left mb-10">
+                    <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground/80 mb-2">Comisiones en otras Plataformas de Cursos</h4>
+                    <p className="text-xs text-muted-foreground"><span className="underline decoration-red-500 decoration-2 underline-offset-4 font-bold">Lo que regalas</span> vs <span className="text-primary font-bold italic">100% tuyo en Acroshub</span></p>
                   </div>
 
-                  {/* Skool Pro */}
-                  <div className="flex flex-col h-[280px] md:h-full justify-end group">
-                    <div className="w-full flex items-end h-[180px] mt-8">
-                      <div className={`w-full relative rounded-t-xl transition-all duration-300 ease-in-out ${getDynamicColorClasses(costoSkoolPro).bar}`} style={{ height: `${(costoSkoolPro / maxCosto) * 100}%`, minHeight: '4px' }}>
-                        <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max text-xl md:text-3xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoSkoolPro).text}`}>${Math.round(costoSkoolPro).toLocaleString()}</div>
+                  <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-6 items-end h-[240px] md:h-[280px]">
+                    {/* Skool Hobby */}
+                    <div className="flex flex-col h-full justify-end group">
+                      {/* Barra Visual */}
+                      <div className="w-full flex items-end h-[160px] relative">
+                        <div className={`w-full relative rounded-t-2xl ${getDynamicColorClasses(costoSkoolHobby).bar}`} style={{ height: `${(costoSkoolHobby / maxCosto) * 100}%`, minHeight: '4px' }}>
+                          <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max text-lg md:text-2xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoSkoolHobby).text}`}>${Math.round(costoSkoolHobby).toLocaleString()}</div>
+                        </div>
+                      </div>
+                      {/* Labels */}
+                      <div className="h-[45px] flex flex-col justify-start items-center mt-3">
+                        <div className="text-[9px] md:text-[11px] font-bold text-muted-foreground uppercase tracking-tighter text-center leading-tight">Skool<br/> Hobby</div>
                       </div>
                     </div>
-                    <div className="h-[60px] flex flex-col justify-start items-center mt-3">
-                      <div className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Skool<br className="md:hidden"/> Pro</div>
-                    </div>
-                  </div>
 
-                  {/* Hotmart */}
-                  <div className="flex flex-col h-[280px] md:h-full justify-end group">
-                    <div className="w-full flex items-end h-[180px] mt-8">
-                      <div className={`w-full relative rounded-t-xl transition-all duration-300 ease-in-out ${getDynamicColorClasses(costoHotmart).bar}`} style={{ height: `${(costoHotmart / maxCosto) * 100}%`, minHeight: '4px' }}>
-                        <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max text-xl md:text-3xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoHotmart).text}`}>${Math.round(costoHotmart).toLocaleString()}</div>
+                    {/* Skool Pro */}
+                    <div className="flex flex-col h-full justify-end group">
+                      <div className="w-full flex items-end h-[160px] relative">
+                        <div className={`w-full relative rounded-t-2xl ${getDynamicColorClasses(costoSkoolPro).bar}`} style={{ height: `${(costoSkoolPro / maxCosto) * 100}%`, minHeight: '4px' }}>
+                          <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max text-lg md:text-2xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoSkoolPro).text}`}>${Math.round(costoSkoolPro).toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <div className="h-[45px] flex flex-col justify-start items-center mt-3">
+                        <div className="text-[9px] md:text-[11px] font-bold text-muted-foreground uppercase tracking-tighter text-center leading-tight">Skool<br/> Pro</div>
                       </div>
                     </div>
-                    <div className="h-[60px] flex flex-col justify-start items-center mt-3">
-                      <div className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Hotmart</div>
-                    </div>
-                  </div>
 
-                  {/* Acroshub */}
-                  <div className="flex flex-col h-[280px] md:h-full justify-end relative group">
-                    <div className="w-full flex items-end h-[180px] mt-8">
-                      <div className="w-full relative bg-primary rounded-t-xl border-t-4 border-primary/20 opacity-90" style={{ height: `${(costoAcroshub / maxCosto) * 100}%`, minHeight: '4px' }}>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max text-xl md:text-3xl font-black text-center text-primary">${costoAcroshub}</div>
+                    {/* Hotmart */}
+                    <div className="flex flex-col h-full justify-end group">
+                      <div className="w-full flex items-end h-[160px] relative">
+                        <div className={`w-full relative rounded-t-2xl ${getDynamicColorClasses(costoHotmart).bar}`} style={{ height: `${(costoHotmart / maxCosto) * 100}%`, minHeight: '4px' }}>
+                          <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max text-lg md:text-2xl font-black text-center transition-colors duration-300 ${getDynamicColorClasses(costoHotmart).text}`}>${Math.round(costoHotmart).toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <div className="h-[45px] flex flex-col justify-start items-center mt-3">
+                        <div className="text-[9px] md:text-[11px] font-bold text-muted-foreground uppercase tracking-tighter text-center leading-tight">Hotmart</div>
                       </div>
                     </div>
-                    
-                    {/* Contenedor Fijo con Labels y Badges */}
-                    <div className="h-[60px] flex flex-col justify-start items-center mt-3">
-                      <div className="flex flex-col items-center justify-center gap-1.5 w-full">
-                        <div className="flex flex-col items-center justify-center gap-1.5 w-full">
-                          <span className="text-[10px] md:text-xs font-bold text-primary uppercase tracking-wider text-center">Acroshub</span>
-                          <div className="text-[8px] md:text-[9px] text-green-700 bg-green-100 font-bold py-[3px] px-1.5 rounded-full w-max tracking-wide uppercase leading-none shadow-sm">
-                            PLAN {planSugeridoName}
+
+                    {/* Acroshub */}
+                    <div className="flex flex-col h-full justify-end relative group">
+                      <div className="w-full flex items-end h-[160px] relative">
+                        <div className="w-full relative bg-primary rounded-t-2xl border-t-2 border-primary/20 shadow-[0_-4px_15px_rgba(var(--primary),0.2)]" style={{ height: `${(costoAcroshub / maxCosto) * 100}%`, minHeight: '4px' }}>
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max text-lg md:text-2xl font-black text-center text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.3)]">${costoAcroshub}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="h-[45px] flex flex-col justify-start items-center mt-3 w-full">
+                        <div className="flex flex-col items-center justify-center gap-1.5 w-full scale-90 sm:scale-100">
+                          <span className="text-[9px] md:text-[11px] font-black text-primary uppercase tracking-tighter">Acroshub</span>
+                          <div className="flex gap-1 justify-center align-middle">
+                            <div className="bg-green-100 text-green-700 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm leading-none flex items-center">
+                              PLAN {planSugeridoName}
+                            </div>
+                            <div className="bg-yellow-400 text-yellow-900 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm leading-none flex items-center">
+                              ⭐ MEJOR
+                            </div>
                           </div>
                         </div>
-                        <div className="bg-yellow-400 text-yellow-900 text-[8px] md:text-[10px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm text-center leading-none">
-                          ⭐ TU MEJOR OPCIÓN
-                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+
               </div>
               
-              <div className="flex flex-col items-center mt-12 gap-3">
-                <Button size="lg" asChild className="h-14 px-10 text-lg shadow-xl shadow-primary/20 rounded-full group">
+              <div className="flex items-center justify-center mt-12 mb-2 w-full">
+                <Button size="lg" asChild className="h-14 px-10 text-lg shadow-xl shadow-primary/20 rounded-full group w-full md:w-auto">
                   <Link to="/register">
-                    Empieza gratis ahora <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    Empezar a ahorrar hoy <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
-                <p className="text-xs text-muted-foreground font-medium">Sin tarjeta de crédito · Sin compromiso</p>
               </div>
             </div>
 
+
             {/* 2. Tabla Comparativa */}
-            <div className="overflow-x-auto rounded-2xl border shadow-xl bg-card">
+            <div className="overflow-x-auto rounded-3xl border shadow-xl bg-card lg:mt-8">
               <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="bg-muted/50 text-xs md:text-sm border-b">
-                    <th className="p-4 md:p-6 font-semibold w-1/4"></th>
-                    <th className="p-4 md:p-6 font-semibold text-muted-foreground w-[18%] text-center border-l bg-card">Skool Hobby</th>
-                    <th className="p-4 md:p-6 font-semibold text-muted-foreground w-[18%] text-center border-l bg-card">Skool Pro</th>
-                    <th className="p-4 md:p-6 font-semibold text-muted-foreground w-[18%] text-center border-l bg-card">Hotmart</th>
-                    <th className="p-4 md:p-6 font-bold text-primary w-[21%] border-l bg-primary/5 text-center relative">
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm">⭐ RECOMENDADO</div>
-                      Acroshub
+                    <th className="p-4 md:p-6 font-semibold w-[28%]"></th>
+                    <th className="p-4 md:p-6 font-semibold text-muted-foreground w-[24%] text-center border-l bg-card">Skool</th>
+                    <th className="p-4 md:p-6 font-semibold text-muted-foreground w-[24%] text-center border-l bg-card">Hotmart</th>
+                    <th className="p-4 md:p-6 font-black text-primary w-[24%] border-l bg-primary/5 text-center relative shadow-[inset_0_4px_0_0_hsl(var(--primary))]">
+                      <div className="flex flex-col md:flex-row items-center justify-center gap-1.5 md:gap-2">
+                        Acroshub
+                        <Badge className="bg-primary text-primary-foreground hover:bg-primary shadow-sm text-[8px] md:text-[9px] px-1.5 h-4 tracking-wider uppercase font-bold">RECOMENDADO</Badge>
+                      </div>
                     </th>
-                  </tr>
-                  <tr className="bg-muted/20 text-xs md:text-sm border-b">
-                    <td colSpan={5} className="p-3 md:p-4 font-bold text-muted-foreground uppercase tracking-widest text-[11px]">Precios</td>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Precio mensual</td>
-                    <td className="p-4 md:p-5 border-l text-center font-medium">$9</td>
-                    <td className="p-4 md:p-5 border-l text-center font-medium">$99</td>
-                    <td className="p-4 md:p-5 border-l text-center font-medium">$0</td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold">${costoAcroshub}</td>
+                  {/* Precio inicial */}
+                  <tr className="border-b transition-colors group">
+                    <td className="p-4 md:p-5 font-semibold text-foreground/80 group-hover:bg-muted/30">Precio inicial</td>
+                    <td className="p-4 md:p-5 border-l text-center font-medium group-hover:bg-muted/30">$9/mes</td>
+                    <td className="p-4 md:p-5 border-l text-center font-medium group-hover:bg-muted/30">$0</td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary group-hover:bg-primary/10">Desde $0</td>
                   </tr>
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Comisión por venta</td>
-                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium">10% <XCircle className="inline h-4 w-4 ml-1 opacity-70" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium">2.9% <XCircle className="inline h-4 w-4 ml-1 opacity-70" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium">9.9% + $0.50 <XCircle className="inline h-4 w-4 ml-1 opacity-70" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600 font-bold">0% <CheckCircle className="inline h-5 w-5 ml-1" /></td>
+                  {/* Comisión por venta */}
+                  <tr className="border-b transition-colors group">
+                    <td className="p-4 md:p-5 font-semibold text-foreground/80 group-hover:bg-muted/30">Comisión por venta</td>
+                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium group-hover:bg-muted/30">10%</td>
+                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium group-hover:bg-muted/30">9.9% + $0.50</td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-black text-primary group-hover:bg-primary/10">0% <CheckCircle className="inline h-4 w-4 ml-0.5" /></td>
                   </tr>
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Retención de fondos</td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground">Procesador</td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground">Procesador</td>
-                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium">30 días <XCircle className="inline h-4 w-4 ml-1 opacity-70" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600 font-bold">Inmediato <CheckCircle className="inline h-5 w-5 ml-1" /></td>
+                  {/* Disponibilidad de fondos */}
+                  <tr className="border-b transition-colors group">
+                    <td className="p-4 md:p-5 font-semibold text-foreground/80 group-hover:bg-muted/30">Disponibilidad de fondos</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground font-medium group-hover:bg-muted/30">7 - 14 días</td>
+                    <td className="p-4 md:p-5 border-l text-center text-red-500 font-medium group-hover:bg-muted/30">2 - 30 días</td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary group-hover:bg-primary/10">Inmediata</td>
                   </tr>
-                  
-                  {/* Sección Características */}
-                  <tr className="bg-muted/20 text-xs md:text-sm border-b">
-                    <td colSpan={5} className="p-3 md:p-4 font-bold text-muted-foreground uppercase tracking-widest text-[11px]">Características</td>
+                  {/* Gestión de Cursos */}
+                  <tr className="border-b transition-colors group">
+                    <td className="p-4 md:p-5 font-semibold text-foreground/80 group-hover:bg-muted/30">Gestión de Cursos</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground group-hover:bg-muted/30"><CheckCircle className="inline h-5 w-5 opacity-60" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground group-hover:bg-muted/30"><CheckCircle className="inline h-5 w-5 opacity-60" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary group-hover:bg-primary/10"><CheckCircle className="inline h-5 w-5" /></td>
                   </tr>
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Cursos ilimitados</td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                  {/* Gestión de Ebooks */}
+                  <tr className="border-b transition-colors group">
+                    <td className="p-4 md:p-5 font-semibold text-foreground/80 group-hover:bg-muted/30">Gestión de Ebooks</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground group-hover:bg-muted/30">Limitado <XCircle className="inline h-4 w-4 ml-1 opacity-40" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground group-hover:bg-muted/30"><CheckCircle className="inline h-5 w-5 opacity-60" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary group-hover:bg-primary/10"><CheckCircle className="inline h-5 w-5" /></td>
                   </tr>
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Alumnos ilimitados</td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
+                  {/* Control manual de Alumnos */}
+                  <tr className="border-b transition-colors group">
+                    <td className="p-4 md:p-5 font-semibold text-foreground/80 group-hover:bg-muted/30">Control manual de Alumnos</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground group-hover:bg-muted/30">Limitado <XCircle className="inline h-4 w-4 ml-1 opacity-40" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/40 group-hover:bg-muted/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary group-hover:bg-primary/10"><CheckCircle className="inline h-5 w-5" /></td>
                   </tr>
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Códigos Mágicos (Regalos)</td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary flex items-center justify-center gap-2">
-                      <CheckCircle className="inline h-5 w-5" /> <Badge variant="default" className="text-[9px] h-4 px-1">EXCLUSIVO</Badge>
-                    </td>
-                  </tr>
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Herramientas de Comunidad</td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-muted-foreground italic text-xs">Próximamente</td>
-                  </tr>
-
-                  {/* Sección Experiencia */}
-                  <tr className="bg-muted/20 text-xs md:text-sm border-b">
-                    <td colSpan={5} className="p-3 md:p-4 font-bold text-muted-foreground uppercase tracking-widest text-[11px]">Experiencia</td>
-                  </tr>
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Plataforma en Español</td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                  </tr>
-                  <tr className="border-b hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium">Soporte nativo en Español</td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center text-green-600"><CheckCircle className="inline h-5 w-5" /></td>
-                  </tr>
-                  <tr className="hover:bg-muted/10 transition-colors">
-                    <td className="p-4 md:p-5 font-medium flex flex-col justify-center h-full">Pagos manuales <span className="text-xs text-muted-foreground font-normal">(Efectivo, Transf.)</span></td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/30"><XCircle className="inline h-5 w-5" /></td>
-                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary flex flex-col items-center justify-center gap-1">
-                      <CheckCircle className="inline h-5 w-5" /> <Badge variant="default" className="text-[9px] h-4 px-1">EXCLUSIVO</Badge>
+                  {/* Cupones Mágicos */}
+                  <tr className="transition-colors group">
+                    <td className="p-4 md:p-5 font-semibold text-foreground/80 group-hover:bg-muted/30">Códigos Mágicos (Regalos)</td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/40 group-hover:bg-muted/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l text-center text-muted-foreground/40 group-hover:bg-muted/30"><XCircle className="inline h-5 w-5" /></td>
+                    <td className="p-4 md:p-5 border-l bg-primary/5 text-center font-bold text-primary group-hover:bg-primary/10 flex flex-col items-center justify-center gap-1.5 h-full">
+                      <CheckCircle className="inline h-5 w-5" />
+                      <Badge variant="default" className="text-[9px] h-4 px-1.5 shadow-sm">EXCLUSIVO</Badge>
                     </td>
                   </tr>
                 </tbody>
               </table>
-              
-              {/* Banner Final (después de la tabla) */}
-              <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6 md:p-10 text-white flex flex-col items-center text-center">
-                <h3 className="text-2xl md:text-3xl font-bold mb-4">¿Por qué elegir Acroshub?</h3>
-                <p className="text-green-50 text-base md:text-lg max-w-2xl mb-2">Precio fijo, sin comisiones, en español, con soporte real.</p>
-                <p className="font-bold text-lg md:text-xl mb-8">Tu dinero es tuyo, no nuestro.</p>
-                
-                <div className="flex flex-wrap justify-center gap-3">
-                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-transparent py-1.5 px-4 text-sm font-medium">💰 0% comisión</Badge>
-                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-transparent py-1.5 px-4 text-sm font-medium">🇪🇸 100% español</Badge>
-                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-transparent py-1.5 px-4 text-sm font-medium">📱 Códigos mágicos</Badge>
-                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-transparent py-1.5 px-4 text-sm font-medium">💵 Pagos manuales</Badge>
-                </div>
-              </div>
+            </div>
+
+            <div className="flex items-center justify-center mt-10 w-full">
+              <Button size="lg" asChild className="h-14 px-10 text-lg shadow-xl shadow-primary/20 rounded-full group w-full md:w-auto">
+                <Link to="/register">
+                  Crear mi academia gratis <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -541,11 +516,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Bottom CTA ─── */}
       <section className="py-16 md:py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-primary/5 -z-10"></div>
         <div className="container px-4 text-center max-w-2xl">
-          <TrendingUp className="h-12 w-12 text-primary mx-auto mb-5 opacity-80" />
+          <AcroshubLogo className="h-16 w-16 text-primary mx-auto mb-6 drop-shadow-sm opacity-90" />
           <h2 className="text-3xl md:text-5xl font-black mb-4">El momento es ahora</h2>
           <p className="text-base md:text-lg text-muted-foreground mb-8">Únete a la revolución de creadores que están construyendo sus propios ecosistemas sin regalar sus ganancias.</p>
           <Button size="lg" asChild className="h-14 px-8 text-lg shadow-xl shadow-primary/20 rounded-full">
@@ -562,10 +536,6 @@ export default function LandingPage() {
             <p className="mt-1 text-xs">© {new Date().getFullYear()} Acroshub. Plataforma de EdTech libre de comisiones.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-4 text-xs font-medium">
-            <Link to="/" className="hover:text-foreground transition-colors">Características</Link>
-            <Link to="/" className="hover:text-foreground transition-colors">Términos</Link>
-            <Link to="/" className="hover:text-foreground transition-colors">Privacidad</Link>
-            <Link to="/" className="hover:text-foreground transition-colors">Soporte</Link>
           </div>
         </div>
       </footer>
