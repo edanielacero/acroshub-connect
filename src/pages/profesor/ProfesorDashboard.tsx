@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 
 export default function ProfesorDashboard() {
   const { user } = useAuth();
-  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, pricingOptions: profPricing, lessons: profLessons, comments: profComments, transactions, profile, planConfig, isLoading } = useProfesorData();
+  const { hubs: profHubs, courses: profCourses, ebooks: profEbooks, enrollments: profSales, pricingOptions: profPricing, lessons: profLessons, comments: profComments, transactions, profile, planConfig, platformSettings, isLoading } = useProfesorData();
 
   const prof = {
     id: user?.id || '',
@@ -224,9 +224,34 @@ export default function ProfesorDashboard() {
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Crown className="h-5 w-5 text-primary" /> Uso de tu Plan
                   </CardTitle>
-                  <span className="text-xs font-semibold uppercase px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {planConfig.name}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const isHubs100 = planConfig.max_hubs !== -1 && profHubs.length >= planConfig.max_hubs;
+                      const isCourses80 = planConfig.max_courses !== -1 && (profCourses.length / planConfig.max_courses) >= 0.8;
+                      const isEbooks80 = planConfig.max_ebooks !== -1 && (profEbooks.length / planConfig.max_ebooks) >= 0.8;
+                      const isStudents80 = planConfig.max_students !== -1 && (totalStudents2 / planConfig.max_students) >= 0.8;
+                      
+                      const showUpgrade = isHubs100 || isCourses80 || isEbooks80 || isStudents80;
+                      const upgradeLink = platformSettings?.value;
+
+                      if (showUpgrade && upgradeLink) {
+                        return (
+                          <Button 
+                            className="h-7 text-xs px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow shadow-orange-500/20"
+                            asChild
+                          >
+                            <a href={upgradeLink} target="_blank" rel="noopener noreferrer">
+                              Mejorar Plan
+                            </a>
+                          </Button>
+                        );
+                      }
+                      return null;
+                    })()}
+                    <span className="text-xs font-semibold uppercase px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      {planConfig.name}
+                    </span>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-4">

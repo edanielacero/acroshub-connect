@@ -156,20 +156,37 @@ export function useProfesorData() {
       const { data, error } = await supabase
         .from('transactions')
         .select('*, profiles(full_name, email)')
-        .in('product_id', productIds);
+        .in('product_id', productIds)
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
     enabled: !!profesorId
   });
 
-  const isCriticalLoading = loadingProfile || loadingPlan || loadingHubs || loadingCourses || loadingEbooks;
+  const { data: platformSettings = null, isLoading: loadingPlatformSettings } = useQuery({
+    queryKey: ['platform_settings', 'manual_plan_link'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('platform_settings')
+        .select('*')
+        .eq('key', 'manual_plan_link')
+        .maybeSingle();
+      if (error) {
+        console.warn('Could not load platform settings:', error.message);
+        return null;
+      }
+      return data;
+    }
+  });
+
+  const isCriticalLoading = loadingProfile || loadingPlan || loadingHubs || loadingCourses || loadingEbooks || loadingPlatformSettings;
   
   // Retrocompatibilidad con components que esperan un bool general, pero más rápido
   const isLoading = isCriticalLoading;
 
   return { 
-    profile, planConfig, planKey, hubs, courses, ebooks, enrollments, pricingOptions, lessons, comments, transactions, 
+    profile, planConfig, planKey, hubs, courses, ebooks, enrollments, pricingOptions, lessons, comments, transactions, platformSettings,
     isLoading, // Rápido, ideal para Dashboard Layout
     loadingEnrollments, loadingPricing, loadingLessons, loadingComments, loadingTransactions // Específicos para evitar parpadeos en tablas
   };

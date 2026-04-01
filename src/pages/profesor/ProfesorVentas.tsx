@@ -9,6 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
+const getMethodLabel = (m: string) => {
+  switch(m) {
+    case 'stripe': return 'Stripe';
+    case 'paypal': return 'PayPal';
+    case 'transfer': return 'Transferencia';
+    case 'cash': return 'Efectivo';
+    case 'crypto': return 'Cripto';
+    case 'magic_code': return 'Código Mágico';
+    case 'manual': return 'Manual';
+    case 'Manual': return 'Manual';
+    default: return m;
+  }
+};
+
 export default function ProfesorVentas() {
   const { enrollments: profSales, courses, ebooks, pricingOptions, transactions, isLoading, loadingTransactions, loadingEnrollments } = useProfesorData();
   
@@ -48,6 +62,9 @@ export default function ProfesorVentas() {
       });
     });
   }
+
+  // Ordenar por fecha descendente (más recientes primero)
+  mappedSales.sort((a, b) => b.date.localeCompare(a.date));
 
   const totalAmount = mappedSales.reduce((a, s) => a + s.amount, 0);
   const today = new Date();
@@ -127,7 +144,7 @@ export default function ProfesorVentas() {
                       <TableCell className="whitespace-nowrap">{s.alumnoName}</TableCell>
                       <TableCell>{s.courseTitle}</TableCell>
                       <TableCell className="font-medium whitespace-nowrap">${s.amount}</TableCell>
-                      <TableCell><Badge variant="secondary" className="capitalize">{s.method}</Badge></TableCell>
+                      <TableCell><Badge variant="secondary">{getMethodLabel(s.method)}</Badge></TableCell>
                     </TableRow>
                   )) : (
                     <TableRow>
@@ -144,7 +161,7 @@ export default function ProfesorVentas() {
                 <p className="text-sm text-muted-foreground">
                   Mostrando {(salesPage - 1) * salesPerPage + 1} a {Math.min(salesPage * salesPerPage, mappedSales.length)} de {mappedSales.length} ventas
                 </p>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   <Button 
                     variant="outline" 
                     size="icon" 
@@ -154,6 +171,9 @@ export default function ProfesorVentas() {
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
+                  <span className="text-sm font-medium text-muted-foreground min-w-[80px] text-center">
+                    Página {salesPage} de {totalSalesPages}
+                  </span>
                   <Button 
                     variant="outline" 
                     size="icon" 

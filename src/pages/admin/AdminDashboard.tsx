@@ -20,9 +20,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [profsRes, alumsRes, plansRes] = await Promise.all([
+        const [profsRes, alumsRes, enrollmentsRes, plansRes] = await Promise.all([
           supabase.from('profiles').select('*').eq('role', 'profesor'),
           supabase.from('profiles').select('*').eq('role', 'alumno'),
+          supabase.from('enrollments').select('alumno_id, profiles(id)'),
           supabase.from('plan_configs').select('key, price, price_annual')
         ]);
         
@@ -39,7 +40,19 @@ export default function AdminDashboard() {
           })));
         }
         
-        if (alumsRes.data) setAlumnos(alumsRes.data);
+        if (alumsRes.data) {
+          const profileMap = new Map();
+          alumsRes.data.forEach(p => profileMap.set(p.id, p));
+          if (enrollmentsRes.data) {
+            enrollmentsRes.data.forEach(e => {
+              const p = e.profiles as any;
+              if (p && !profileMap.has(p.id)) {
+                profileMap.set(p.id, p);
+              }
+            });
+          }
+          setAlumnos(Array.from(profileMap.values()));
+        }
         
         if (plansRes.data) {
           const prices: Record<string, { mensual: number; anual: number }> = {};

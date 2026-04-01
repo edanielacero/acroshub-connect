@@ -336,7 +336,22 @@ export default function ProfesorAlumnoDetail() {
       case 'transfer': return "bg-gray-100 text-gray-800";
       case 'cash': return "bg-green-100 text-green-800";
       case 'crypto': return "bg-orange-100 text-orange-800";
+      case 'magic_code': return "bg-purple-100 text-purple-800 hover:bg-purple-100";
       default: return "bg-slate-100 text-slate-800";
+    }
+  };
+
+  const getMethodLabel = (m: string) => {
+    switch(m) {
+      case 'stripe': return 'Stripe';
+      case 'paypal': return 'PayPal';
+      case 'transfer': return 'Transferencia';
+      case 'cash': return 'Efectivo';
+      case 'crypto': return 'Cripto';
+      case 'magic_code': return 'Código Mágico';
+      case 'manual': return 'Manual';
+      case 'asignación directa': return 'Asignación directa';
+      default: return m;
     }
   };
 
@@ -569,7 +584,7 @@ export default function ProfesorAlumnoDetail() {
                         <TableCell>{formatDateProject(p.createdAt)}</TableCell>
                         <TableCell className="font-medium text-muted-foreground">{courses.find(c => c.id === p.productId)?.title || ebooks.find(e => e.id === p.productId)?.title || 'Desconocido'}</TableCell>
                         <TableCell className="font-bold text-success">${p.amount.toFixed(2)} {p.currency || 'USD'}</TableCell>
-                        <TableCell><Badge className={`border-none capitalize ${getMethodBadge(p.method)}`}>{p.method}</Badge></TableCell>
+                        <TableCell><Badge className={`border-none ${getMethodBadge(p.method)}`}>{getMethodLabel(p.method)}</Badge></TableCell>
                         <TableCell className="text-muted-foreground max-w-[200px] truncate" title={p.notes || ''}>{p.notes || '-'}</TableCell>
                       </TableRow>
                     ))}

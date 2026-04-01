@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, DollarSign, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, DollarSign, GraduationCap, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -11,7 +11,8 @@ const adminLinks = [
   { to: "/admin/profesores", label: "Profesores", icon: Users },
   { to: "/admin/alumnos", label: "Alumnos", icon: GraduationCap },
   { to: "/admin/ventas", label: "Ventas", icon: DollarSign },
-  { to: "/admin/configuracion", label: "Planes", icon: Settings },
+  { to: "/admin/planes", label: "Planes", icon: Crown },
+  { to: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -16,6 +16,7 @@ import AdminProfesores from "./pages/admin/AdminProfesores";
 import AdminProfesorDetail from "./pages/admin/AdminProfesorDetail";
 import AdminVentas from "./pages/admin/AdminVentas";
 import AdminConfiguracion from "./pages/admin/AdminConfiguracion";
+import AdminPlanes from "./pages/admin/AdminPlanes";
 import AdminAlumnos from "./pages/admin/AdminAlumnos";
 import AdminAlumnoDetail from "./pages/admin/AdminAlumnoDetail";
 
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="/admin/alumnos" element={<AdminAlumnos />} />
               <Route path="/admin/alumnos/:id" element={<AdminAlumnoDetail />} />
               <Route path="/admin/ventas" element={<AdminVentas />} />
+              <Route path="/admin/planes" element={<AdminPlanes />} />
               <Route path="/admin/configuracion" element={<AdminConfiguracion />} />
             </Route>
 
