@@ -373,8 +373,8 @@ export default function LandingPage() {
             </div>
 
 
-            {/* 2. Tabla Comparativa */}
-            <div className="overflow-x-auto rounded-3xl border shadow-xl bg-card lg:mt-8">
+            {/* 2. Tabla Comparativa con Scrollbar Personalizada e Invitación al Desplazamiento (Solo Mobile) */}
+            <div className="overflow-x-auto rounded-3xl border shadow-xl bg-card lg:mt-8 custom-mobile-scroll">
               <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="bg-muted/50 text-xs md:text-sm border-b">
@@ -445,6 +445,34 @@ export default function LandingPage() {
                 </tbody>
               </table>
             </div>
+            <style dangerouslySetInnerHTML={{ __html: `
+              /* Estilo de barra de desplazamiento integrada para mobile */
+              @media (max-width: 767px) {
+                .custom-mobile-scroll::-webkit-scrollbar {
+                  height: 4px;
+                  display: block !important;
+                }
+                .custom-mobile-scroll::-webkit-scrollbar-track {
+                  background: rgba(0, 0, 0, 0.05);
+                  border-radius: 10px;
+                  margin: 0 20px;
+                }
+                .custom-mobile-scroll::-webkit-scrollbar-thumb {
+                  background: #3b82f6; /* Azul primario */
+                  border-radius: 10px;
+                }
+                
+                @keyframes subtle-bounce {
+                  0%, 100% { transform: translateX(0); }
+                  50% { transform: translateX(-6px); }
+                }
+                
+                /* Aplicar la animación solo en mobile de verdad */
+                .custom-mobile-scroll {
+                  animation: subtle-bounce 3s ease-in-out infinite;
+                }
+              }
+            `}} />
 
             <div className="flex items-center justify-center mt-10 w-full">
               <Button size="lg" asChild className="h-14 px-10 text-lg shadow-xl shadow-primary/20 rounded-full group w-full md:w-auto">
