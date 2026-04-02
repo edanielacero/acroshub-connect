@@ -1,5 +1,0 @@
----
-deployment:
-  tasks:
-    - /bin/cp -R dist/* /home/enygzigx/public_html/acroshub.com
-    - /bin/cp dist/.htaccess /home/enygzigx/public_html/acroshub.com/.htaccess
