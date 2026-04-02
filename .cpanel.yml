@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/enygzigx/public_html
+    - export DEPLOYPATH=/home/enygzigx/public_html/acroshub.com
     - /bin/cp -R dist/* $DEPLOYPATH
