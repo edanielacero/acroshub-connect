@@ -187,10 +187,52 @@ export default function ClaseReproductor() {
     return url;
   };
 
+  const renderCourseIndex = () => (
+    <div className="border rounded-2xl bg-card overflow-hidden shadow-sm">
+      <Accordion type="multiple" defaultValue={[modulo.id]} className="w-full">
+        {course.modules.map((m: any, idx: number) => (
+          <AccordionItem value={m.id} key={m.id} className="border-b-0 last:border-b-0 px-1">
+            <AccordionTrigger className={`text-[13px] hover:no-underline font-semibold px-3 py-3 rounded-xl my-1 transition-colors ${m.id === modulo.id ? 'bg-primary/5 text-primary' : 'bg-muted/30 data-[state=open]:bg-muted/50'}`}>
+              <div className="flex flex-col items-start text-left gap-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">Módulo {idx + 1}</span>
+                  <span className="line-clamp-2 leading-snug">{m.title}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <ul className="space-y-1 mt-1 px-1">
+                {m.lessons.map((l: any) => {
+                  const isCurrent = id === l.id;
+                  return (
+                  <li key={l.id}>
+                    <Link 
+                      to={`/${hub.slug}/clase/${l.id}`}
+                      className={`flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg transition-colors border ${
+                        isCurrent 
+                          ? "bg-background border-primary/20 shadow-sm font-semibold text-primary" 
+                          : "hover:bg-muted border-transparent text-muted-foreground"
+                      }`}
+                    >
+                      {claseCompletada(l.id) ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                      ) : (
+                        <Circle className={`h-4 w-4 shrink-0 ${isCurrent ? 'text-primary' : 'opacity-30'}`} />
+                      )}
+                      <span className="line-clamp-2 leading-tight">{l.title}</span>
+                    </Link>
+                  </li>
+                )})}
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+
   return (
-    <div className="animate-fade-in grid gap-8 lg:grid-cols-4 max-w-[1400px] mx-auto px-4 sm:px-6">
+    <div className="animate-fade-in grid gap-6 lg:gap-8 lg:grid-cols-4 max-w-[1400px] mx-auto px-4 sm:px-6 mb-12">
       {/* Video y contenido principal */}
-      <main className="lg:col-span-3 space-y-8">
+      <main className="lg:col-span-3 space-y-6 sm:space-y-8">
         {/* Video Player */}
         <div className="aspect-video bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-1 ring-border relative group">
           {clase.video_url ? (
@@ -221,37 +263,37 @@ export default function ClaseReproductor() {
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white/50 bg-slate-900 flex-col gap-4">
                <PlayCircle className="h-16 w-16 opacity-30 group-hover:scale-110 transition-transform duration-500" />
-               <p className="font-medium">Video no disponible o en procesamiento</p>
-               <span className="text-xs bg-white/10 px-3 py-1 rounded-full">{modulo.title}</span>
+               <p className="font-medium text-sm sm:text-base">Video no disponible o en procesamiento</p>
+               <span className="text-[10px] sm:text-xs bg-white/10 px-3 py-1 rounded-full">{modulo.title}</span>
             </div>
           )}
         </div>
         
         {/* Encabezado y navegación rápida */}
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start justify-between bg-card p-6 rounded-2xl border shadow-sm">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="outline" className="text-xs">{modulo.title}</Badge>
-              {clase.is_free_preview && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 uppercase tracking-widest text-[10px] font-bold">Preview</Badge>}
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start justify-between bg-card p-4 sm:p-6 rounded-2xl border shadow-sm">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="outline" className="text-[10px] sm:text-xs">{modulo.title}</Badge>
+              {clase.is_free_preview && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 uppercase tracking-widest text-[9px] sm:text-[10px] font-bold">Preview</Badge>}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{clase.title}</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight leading-tight">{clase.title}</h1>
           </div>
           
-          <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+          <div className="flex items-center gap-3 w-full sm:w-auto mt-1 sm:mt-0">
             {!isCompleted && (
-              <Button onClick={() => marcarCompletada()} disabled={isMarking} className="gap-2 shrink-0 bg-green-600 hover:bg-green-700 text-white shadow-sm flex-1 sm:flex-none">
+              <Button onClick={() => marcarCompletada()} disabled={isMarking} className="gap-2 shrink-0 bg-green-600 hover:bg-green-700 text-white shadow-sm flex-1 sm:flex-none h-11 sm:h-10 text-sm">
                 {isMarking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 Marcar lista
               </Button>
             )}
             
             <div className="flex gap-2 shrink-0">
-              <Button variant="outline" size="icon" asChild disabled={!clasePrev} className={!clasePrev ? "opacity-50 pointer-events-none" : ""}>
+              <Button variant="outline" size="icon" asChild disabled={!clasePrev} className={`h-11 w-11 sm:h-10 sm:w-10 ${!clasePrev ? "opacity-50 pointer-events-none" : ""}`}>
                 <Link to={clasePrev ? `/${hub.slug}/clase/${clasePrev.id}` : '#'}>
                   <ChevronLeft className="h-5 w-5" />
                 </Link>
               </Button>
-              <Button variant="outline" size="icon" asChild disabled={!claseNext} className={!claseNext ? "opacity-50 pointer-events-none" : ""}>
+              <Button variant="outline" size="icon" asChild disabled={!claseNext} className={`h-11 w-11 sm:h-10 sm:w-10 ${!claseNext ? "opacity-50 pointer-events-none" : ""}`}>
                 <Link to={claseNext ? `/${hub.slug}/clase/${claseNext.id}` : '#'}>
                   <ChevronRight className="h-5 w-5" />
                 </Link>
@@ -259,42 +301,49 @@ export default function ClaseReproductor() {
             </div>
           </div>
         </div>
+
+        {/* MÓDULOS EN MOBILE: Justo debajo del video/header */}
+        <div className="lg:hidden animate-fade-in">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h3 className="font-bold text-base leading-tight">Índice del curso</h3>
+            <span className="text-xs text-muted-foreground">{course.modules.length} módulos</span>
+          </div>
+          {renderCourseIndex()}
+        </div>
         
         {/* Tabs: Descripción, Recursos, Quiz, Comentarios */}
         <div className="pt-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full justify-start overflow-x-auto bg-transparent border-b rounded-none px-0 h-auto pb-px scrollbar-hide">
-              <TabsTrigger value="descripcion" className="data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-6 py-3 text-base">Descripción</TabsTrigger>
-              {clase.quiz && <TabsTrigger value="quiz" className="data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-6 py-3 text-base">Quiz Automático</TabsTrigger>}
-              <TabsTrigger value="comentarios" className="data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-6 py-3 text-base">
+            <TabsList className="w-full justify-start overflow-x-auto bg-transparent border-b rounded-none px-0 h-auto pb-px scrollbar-hide flex">
+              <TabsTrigger value="descripcion" className="data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 sm:px-6 py-3 text-sm sm:text-base whitespace-nowrap flex-1 sm:flex-none">Descripción</TabsTrigger>
+              {clase.quiz && <TabsTrigger value="quiz" className="data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 sm:px-6 py-3 text-sm sm:text-base whitespace-nowrap flex-1 sm:flex-none">Quiz</TabsTrigger>}
+              <TabsTrigger value="comentarios" className="data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 sm:px-6 py-3 text-sm sm:text-base whitespace-nowrap flex-1 sm:flex-none">
                 Discusión
-                <Badge variant="secondary" className="ml-2 bg-muted-foreground/15 text-muted-foreground text-xs">{commentCount}</Badge>
+                <Badge variant="secondary" className="ml-2 bg-muted-foreground/15 text-muted-foreground text-[10px] sm:text-xs">{commentCount}</Badge>
               </TabsTrigger>
             </TabsList>
             
-            <div className="py-8 min-h-[400px]">
-                <TabsContent value="descripcion" className="mt-0 focus-visible:outline-none prose prose-slate max-w-none">
+            <div className="py-6 sm:py-8 min-h-[400px]">
+                <TabsContent value="descripcion" className="mt-0 focus-visible:outline-none prose prose-slate dark:prose-invert max-w-none">
                   {clase.content ? (
-                      <div dangerouslySetInnerHTML={{ __html: clase.content }} className="text-muted-foreground text-lg leading-relaxed" />
+                      <div dangerouslySetInnerHTML={{ __html: clase.content }} className="text-muted-foreground text-base sm:text-lg leading-relaxed" />
                   ) : (
                       <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
-                          Sin descripción larga provista.
+                          Sin descripción provista.
                       </div>
                   )}
                 </TabsContent>
                 
-
-                
                 {clase.quiz && (
-                <TabsContent value="quiz" className="mt-0 focus-visible:outline-none">
-                  <QuizComponent quiz={clase.quiz.questions || clase.quiz} onComplete={handleQuizComplete} />
-                </TabsContent>
+                  <TabsContent value="quiz" className="mt-0 focus-visible:outline-none">
+                    <QuizComponent quiz={clase.quiz.questions || clase.quiz} onComplete={handleQuizComplete} />
+                  </TabsContent>
                 )}
                 
                 <TabsContent value="comentarios" id="comentarios-tab-content" className="mt-0 focus-visible:outline-none">
-                  <div className="flex items-center gap-3 mb-8">
+                  <div className="flex items-center gap-3 mb-6 sm:mb-8">
                       <MessageSquare className="h-6 w-6 text-primary" />
-                      <h3 className="text-xl font-bold">Discusión de la clase</h3>
+                      <h3 className="text-lg sm:text-xl font-bold">Discusión de la clase</h3>
                   </div>
                   <ComentariosComponent lessonId={clase.id} />
                 </TabsContent>
@@ -303,53 +352,14 @@ export default function ClaseReproductor() {
         </div>
       </main>
       
-      {/* Sidebar con índice del curso */}
-      <aside className="lg:col-span-1 border-l pl-0 lg:pl-8">
+      {/* Sidebar con índice del curso (OCULTO EN MOBILE) */}
+      <aside className="lg:col-span-1 hidden lg:block border-l pl-8">
         <div className="sticky top-24 pb-10">
           <div className="mb-4">
               <h3 className="font-bold text-lg leading-tight line-clamp-2">{course.title}</h3>
               <p className="text-sm text-muted-foreground mt-1">Navegación del curso</p>
           </div>
-          
-          <div className="border rounded-2xl bg-card overflow-hidden shadow-sm">
-            <Accordion type="multiple" defaultValue={[modulo.id]} className="w-full">
-              {course.modules.map((m, idx) => (
-                <AccordionItem value={m.id} key={m.id} className="border-b-0 last:border-b-0 px-1">
-                  <AccordionTrigger className={`text-[13px] hover:no-underline font-semibold px-3 py-3 rounded-xl my-1 transition-colors ${m.id === modulo.id ? 'bg-primary/5 text-primary' : 'bg-muted/30 data-[state=open]:bg-muted/50'}`}>
-                    <div className="flex flex-col items-start text-left gap-1">
-                        <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">Módulo {idx + 1}</span>
-                        <span className="line-clamp-2 leading-snug">{m.title}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-3 pt-1">
-                    <ul className="space-y-1 mt-1 px-1">
-                      {m.lessons.map(l => {
-                        const isCurrent = clase.id === l.id;
-                        return (
-                        <li key={l.id}>
-                          <Link 
-                            to={`/${hub.slug}/clase/${l.id}`}
-                            className={`flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg transition-colors border ${
-                              isCurrent 
-                                ? "bg-background border-primary/20 shadow-sm font-semibold text-primary" 
-                                : "hover:bg-muted border-transparent text-muted-foreground"
-                            }`}
-                          >
-                            {claseCompletada(l.id) ? (
-                              <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                            ) : (
-                              <Circle className={`h-4 w-4 shrink-0 ${isCurrent ? 'text-primary' : 'opacity-30'}`} />
-                            )}
-                            <span className="line-clamp-2 leading-tight">{l.title}</span>
-                          </Link>
-                        </li>
-                      )})}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
+          {renderCourseIndex()}
         </div>
       </aside>
     </div>
