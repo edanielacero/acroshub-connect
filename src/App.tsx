@@ -40,6 +40,7 @@ import CursoDetalle from "./pages/hub/CursoDetalle";
 import EbookDetalle from "./pages/hub/EbookDetalle";
 import HubProductos from "./pages/hub/HubProductos";
 import ClaseReproductor from "./pages/hub/ClaseReproductor";
+import TermsPage from "./pages/TermsPage";
 import { PreviewProvider } from "./components/layout/PreviewProvider";
 
 import AlumnoDashboard from "./pages/alumno/AlumnoDashboard";
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/activar-cuenta" element={<ActivarCuenta />} />
+            <Route path="/terminos-y-condiciones" element={<TermsPage />} />
             
             <Route element={<RoleRoute allowedRoles={['profesor', 'alumno', 'super_admin']} />}>
               <Route path="/seleccionar-vista" element={<RoleSelector />} />

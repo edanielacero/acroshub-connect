@@ -536,6 +536,7 @@ export default function LandingPage() {
             <p className="mt-1 text-xs">© {new Date().getFullYear()} Acroshub. Plataforma de EdTech libre de comisiones.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-4 text-xs font-medium">
+            <Link to="/terminos-y-condiciones" className="hover:text-primary transition-colors">Términos y Condiciones</Link>
           </div>
         </div>
       </footer>

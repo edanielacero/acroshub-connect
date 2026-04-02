@@ -8,17 +8,25 @@ import { AcroshubLogo } from "@/components/brand/AcroshubLogo";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"profesor" | "alumno">("alumno");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!acceptedTerms) {
+      toast.error("Debes aceptar los términos y condiciones para continuar.");
+      return;
+    }
+
     setLoading(true);
 
     const { data, error } = await supabase.auth.signUp({
@@ -82,7 +90,28 @@ export default function RegisterPage() {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            
+            <div className="flex items-start space-x-3 py-2">
+              <Checkbox 
+                id="terms" 
+                checked={acceptedTerms} 
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                required
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label
+                  htmlFor="terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Acepto los <Link to="/terminos-y-condiciones" className="text-primary hover:underline" target="_blank">términos y condiciones</Link>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Al registrarte, confirmas que has leído y aceptas nuestro aviso legal.
+                </p>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading || !acceptedTerms}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {loading ? "Creando cuenta..." : "Crear cuenta"}
             </Button>
